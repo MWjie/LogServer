@@ -70,7 +70,7 @@ INT LOG_CheckAddrIPv4(IN CHAR *pcAddrIP)
         return -1;
     }
 
-    if (4 == sscanf(pcAddrIP, "%u.%u.%u.%u", uiAddr1, uiAddr2, uiAddr3, uiAddr4))
+    if (4 == sscanf(pcAddrIP, "%u.%u.%u.%u", &uiAddr1, &uiAddr2, &uiAddr3, &uiAddr4))
     {
         if (255 >= uiAddr1 || 255 >= uiAddr2 || 255 >= uiAddr3 || 255 >= uiAddr4)
         {
