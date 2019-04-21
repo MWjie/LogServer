@@ -20,31 +20,31 @@ extern "C" {
 #include "log.h"
 
 
-STATIC INT LOG_ParsePara(IN INT argc, IN const CHAR *argv[])
+STATIC VOID LOG_ParsePara(IN CHAR *argv[])
 {
-    if (0 == strcasecmp(argv[1], "?")  ||
+	if (0 == strcmp(argv[1], "?")  ||
         0 == strcasecmp(argv[1], "-h") ||
         0 == strcasecmp(argv[1], "-help"))
     {
-        return LOG_CmdUsage();
+        LOG_CmdUsage();
     }
     else if (0 == strcasecmp(argv[1], "-s") ||
              0 == strcasecmp(argv[1], "-set"))
     {
-        return LOG_CmdSet(argv[2]);
+        LOG_CmdSet(argv[2]);
     }
     else
     {
-        return LOG_CmdUsage();
+        LOG_CmdUsage();
     }
 }
 
 
-INT main(IN INT argc, IN const CHAR *argv[])
+INT main(IN INT argc, IN CHAR *argv[])
 {
     if (2 <= argc)
     {
-        (VOID)LOG_ParsePara(argc, argv);
+        LOG_ParsePara(argv);
     }
 
     srand(time(NULL) ^ getpid());

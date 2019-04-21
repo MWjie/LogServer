@@ -1,4 +1,4 @@
-release_hdr := $(shell sh -c 'chmod 777 mkreleasehdr.sh || ./mkreleasehdr.sh')
+release_hdr := $(shell sh -c 'chmod 777 mkreleasehdr.sh && ./mkreleasehdr.sh')
 uname_S 	:= $(shell sh -c 'uname -s 2>/dev/null 		|| echo not')
 uname_M 	:= $(shell sh -c 'uname -m 2>/dev/null 		|| echo not')
 
@@ -136,7 +136,7 @@ $(DIR_OBJ)/%.o: $(DIR_SRC)/%.c
 	$(LOG_CC) $(CFLAGS) -c $< -o $@
 
 $(BIN_TARGET): $(OBJ_TARGET)
-	$(LOG_LD) $(OBJ_TARGET) -o $@ $^ $(FINAL_LIBS)
+	$(LOG_LD) $(OBJ_TARGET) -o $@ #$^ $(FINAL_LIBS)
 
 .PHONY: clean
 clean:
@@ -144,4 +144,4 @@ clean:
 
 .PHONY: distclean
 distclean:
-	rm -rf ${DIR_OBJ} ${DIR_BIN}
+	rm -rf ${DIR_OBJ} ${DIR_BIN} release.h

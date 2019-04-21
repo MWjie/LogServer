@@ -24,40 +24,6 @@ CHAR szLogAddrIP[16] = "127.0.0.1";   //Log Server IP Address
 USHORT usLogAddrPort = 32001;         //Log Server IP Port
 
 
-VOID LOG_CmdUsage(VOID)
-{
-    fprintf(stderr, "Usage: (1) ./logserver \n");
-    fprintf(stderr, "       (2) ./logserver -h/-help \n");
-    fprintf(stderr, "       (3) ./logserver -s/-set 127.0.0.1:32001 \n");
-    exit(1);
-}
-
-VOID LOG_CmdSet(IN CHAR *pcAddrStr)
-{
-    CHAR *pcAddrIP   = NULL;
-    CHAR *pcAddrPort = NULL;
-
-    if (NULL == pcAddrStr)
-    {
-        return;
-    }
-
-    pcAddrIP   = pcAddrStr;
-    pcAddrPort = strchr(pcAddrStr, ':');
-    if (NULL == pcAddrPort)
-    {
-        return;
-    }
-
-    if (0 == LOG_CheckAddrIPv4(pcAddrIP) &&
-        0 == LOG_CheckAddrPort(pcAddrPort + 1))
-    {
-        sscanf(pcAddrStr, "%[^:]:%u", szLogAddrIP, usLogAddrPort);
-    }
-
-    return;
-}
-
 INT LOG_CheckAddrIPv4(IN CHAR *pcAddrIP)
 {
     UINT uiAddr1 = 0;
@@ -97,8 +63,43 @@ INT LOG_CheckAddrPort(IN CHAR *pcAddrPort)
         return 0;
     }
 
-    return -1;
+	return -1;
 }
+
+VOID LOG_CmdUsage(VOID)
+{
+    fprintf(stderr, "Usage: (1) ./logserver \n");
+    fprintf(stderr, "       (2) ./logserver -h/-help \n");
+    fprintf(stderr, "       (3) ./logserver -s/-set 127.0.0.1:32001 \n");
+    exit(1);
+}
+
+VOID LOG_CmdSet(IN CHAR *pcAddrStr)
+{
+    CHAR *pcAddrIP   = NULL;
+    CHAR *pcAddrPort = NULL;
+
+    if (NULL == pcAddrStr)
+    {
+        return;
+    }
+
+    pcAddrIP   = pcAddrStr;
+    pcAddrPort = strchr(pcAddrStr, ':');
+    if (NULL == pcAddrPort)
+    {
+        return;
+    }
+
+    if (0 == LOG_CheckAddrIPv4(pcAddrIP) &&
+        0 == LOG_CheckAddrPort(pcAddrPort + 1))
+    {
+        sscanf(pcAddrStr, "%[^:]:%hu", szLogAddrIP, &usLogAddrPort);
+    }
+
+    return;
+}
+
 
 #ifdef __cplusplus
 }
