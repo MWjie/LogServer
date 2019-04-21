@@ -129,13 +129,13 @@ LOG_LD			= $(QUIET_LINK)$(CC) $(FINAL_LDFLAGS)
 LOG_INSTALL		= $(QUIET_INSTALL)$(INSTALL)
 
 SERVER_NAME		= LogServer
-BIN_TARGET 		= ${DIR_BIN}/${SERVER_NAME}
-OBJ_TARGET 		= $(patsubst %.c,${DIR_OBJ}/%.o,$(notdir $(wildcard ${DIR_SRC}/*.c)))
+BIN_TARGET 		= $(DIR_BIN)/$(SERVER_NAME)
+OBJ_TARGET 		= $(patsubst %.c,$(DIR_OBJ)/%.o,$(notdir $(wildcard ${DIR_SRC}/*.c)))
 
-${DIR_OBJ}/%.o: ${DIR_SRC}/%.c
+$(DIR_OBJ)/%.o: $(DIR_SRC)/%.c
 	$(LOG_CC) $(CFLAGS) -c $< -o $@
 
-${BIN_TARGET}: ${OBJ_TARGET)
+$(BIN_TARGET): $(OBJ_TARGET)
 	$(LOG_LD) $(OBJ_TARGET) -o $@ $^ $(FINAL_LIBS)
 
 .PHONY: clean
