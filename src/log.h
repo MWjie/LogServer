@@ -23,6 +23,10 @@ typedef unsigned long long  UINT64;
 #define STATIC  static
 
 
+extern VOID LOG_CmdUsage(VOID);
+extern VOID LOG_CmdSet(IN CHAR *pcAddrStr);
+extern VOID LOG_CheckAddrIPv4(VOID);
+extern INT LOG_CheckAddrPort(IN CHAR *pcAddrPort);
 
 
 

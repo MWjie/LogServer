@@ -32,6 +32,31 @@ VOID LOG_CmdUsage(VOID)
     exit(1);
 }
 
+VOID LOG_CmdSet(IN CHAR *pcAddrStr)
+{
+    CHAR *pcAddrIP   = NULL;
+    CHAR *pcAddrPort = NULL;
+
+    if (NULL == pcAddrStr)
+    {
+        return;
+    }
+
+    pcAddrIP   = pcAddrStr;
+    pcAddrPort = strchr(pcAddrStr, ':');
+    if (NULL == pcAddrPort)
+    {
+        return;
+    }
+
+    if (0 == LOG_CheckAddrIPv4(pcAddrIP) &&
+        0 == LOG_CheckAddrPort(pcAddrPort + 1))
+    {
+        sscanf(pcAddrStr, "%[^:]:%u", szLogAddrIP, usLogAddrPort);
+    }
+
+    return;
+}
 
 INT LOG_CheckAddrIPv4(IN CHAR *pcAddrIP)
 {
@@ -74,34 +99,6 @@ INT LOG_CheckAddrPort(IN CHAR *pcAddrPort)
 
     return -1;
 }
-
-
-VOID LOG_CmdSet(IN CHAR *pcAddrStr)
-{
-    CHAR *pcAddrIP   = NULL;
-    CHAR *pcAddrPort = NULL;
-
-    if (NULL == pcAddrStr)
-    {
-        return;
-    }
-
-    pcAddrIP   = pcAddrStr;
-    pcAddrPort = strchr(pcAddrStr, ':');
-    if (NULL == pcAddrPort)
-    {
-        return;
-    }
-
-    if (0 == LOG_CheckAddrIPv4(pcAddrIP) &&
-        0 == LOG_CheckAddrPort(pcAddrPort + 1))
-    {
-        sscanf(pcAddrStr, "%[^:]:%u", szLogAddrIP, usLogAddrPort);
-    }
-
-    return;
-}
-
 
 #ifdef __cplusplus
 }
