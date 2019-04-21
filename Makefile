@@ -1,6 +1,6 @@
-release_hdr := $(shell sh -c './mkreleasehdr.sh')
-uname_S 	:= $(shell sh -c 'uname -s 2>/dev/null || echo not')
-uname_M 	:= $(shell sh -c 'uname -m 2>/dev/null || echo not')
+release_hdr := $(shell sh -c 'chmod 777 mkreleasehdr.sh || ./mkreleasehdr.sh')
+uname_S 	:= $(shell sh -c 'uname -s 2>/dev/null 		|| echo not')
+uname_M 	:= $(shell sh -c 'uname -m 2>/dev/null 		|| echo not')
 
 # Default settings
 OPTIMIZATION?=-O2
@@ -109,11 +109,9 @@ endif
 
 
 
-DIR_SRC = ./src
-DIR_OBJ = ./obj
-DIR_BIN = ./bin
-OBJ 	= $(patsubst %.c,${DIR_OBJ}/%.o,$(notdir $(wildcard ${DIR_SRC}/*.c)))
-
+DIR_SRC 		= ./src
+DIR_OBJ 		= ./obj
+DIR_BIN 		= ./bin
 
 CCCOLOR			= "\033[34m"
 LINKCOLOR		= "\033[34;1m"
@@ -132,12 +130,13 @@ LOG_INSTALL		= $(QUIET_INSTALL)$(INSTALL)
 
 SERVER_NAME		= LogServer
 BIN_TARGET 		= ${DIR_BIN}/${SERVER_NAME}
+OBJ_TARGET 		= $(patsubst %.c,${DIR_OBJ}/%.o,$(notdir $(wildcard ${DIR_SRC}/*.c)))
 
 ${DIR_OBJ}/%.o: ${DIR_SRC}/%.c
 	$(LOG_CC) $(CFLAGS) -c $< -o $@
 
-${DIR_BIN}/${SERVER_NAME}: ${SERVER_NAME)
-	$(LOG_LD) $(OBJ) -o $@ $^ $(FINAL_LIBS)
+${BIN_TARGET}: ${OBJ_TARGET)
+	$(LOG_LD) $(OBJ_TARGET) -o $@ $^ $(FINAL_LIBS)
 
 .PHONY: clean
 clean:
