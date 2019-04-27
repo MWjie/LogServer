@@ -22,14 +22,8 @@ extern "C" {
 
 STATIC VOID LOG_ParsePara(IN CHAR *argv[])
 {
-	if (0 == strcmp(argv[1], "?")  ||
-        0 == strcasecmp(argv[1], "-h") ||
-        0 == strcasecmp(argv[1], "-help"))
-    {
-        LOG_CmdUsage();
-    }
-    else if (0 == strcasecmp(argv[1], "-s") ||
-             0 == strcasecmp(argv[1], "-set"))
+	if (0 == strcasecmp(argv[1], "-s") ||
+        0 == strcasecmp(argv[1], "-set"))
     {
         LOG_CmdSet(argv[2]);
     }

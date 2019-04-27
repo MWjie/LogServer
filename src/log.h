@@ -14,6 +14,7 @@ typedef long long           INT64;
 typedef unsigned char       UCHAR;
 typedef unsigned short      USHORT;
 typedef unsigned int        UINT;
+typedef unsigned long       ULONG;
 typedef unsigned long long  UINT64;
 
 

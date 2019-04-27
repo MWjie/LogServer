@@ -19,10 +19,35 @@ extern "C" {
 
 #include "log.h"
 
+#define LOG_LocalSysLogBufSize      ( 512UL )
 
 CHAR szLogAddrIP[16] = "127.0.0.1";   //Log Server IP Address
 USHORT usLogAddrPort = 32001;         //Log Server IP Port
 
+INT LOG_LocalSyslog(FILE *stream, CHAR *fmt, ...)
+{
+    va_list ap;
+    struct timeval stTimeVal;
+    struct tm stLocalTime;
+
+    ULONG ulStrLen = 0;
+    CHAR szLogStr[LOG_LocalSysLogBufSize];
+
+    va_start(ap, fmt);
+    gettimeofday(&stTimeVal, NULL);
+    localtime_r(&stTimeVal->tv_sec, &stLocalTime);
+
+    ulStrLen += scnprintf(szLogStr, sizeof(szLogStr), "%4d-%02d-%02d %2d:%2d:2d %s[%d]: ",
+                          stLocalTime->tm_year + 1900, stLocalTime->tm_mon + 1, stLocalTime->tm_mday,
+                          stLocalTime->tm_hour, stLocalTime->tm_min, stLocalTime->tm_sec, __FUNCTION__, __LINE__);
+    ulStrLen += scnprintf(szLogStr + ulStrLen, sizeof(szLogStr) - ulStrLen, fmt, ap);
+
+
+    fwrite(szLogStr, sizeof(szLogStr), 1, stream);
+
+
+    va_end(ap);
+}
 
 INT LOG_CheckAddrIPv4(IN CHAR *pcAddrIP)
 {
@@ -70,7 +95,8 @@ VOID LOG_CmdUsage(VOID)
 {
     fprintf(stderr, "Usage: (1) ./logserver \n");
     fprintf(stderr, "       (2) ./logserver -h/-help \n");
-    fprintf(stderr, "       (3) ./logserver -s/-set 127.0.0.1:32001 \n");
+    fprintf(stderr, "       (3) ./logserver -s/-set Address=127.0.0.1:32001 \n");
+    fprintf(stderr, "       (4) ./logserver -s/-set CPU=0 \n");
     exit(1);
 }
 
