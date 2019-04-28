@@ -40,7 +40,7 @@ typedef struct LOG_ServerContext {
 } LOGServerContext_S;
 
 
-
+extern INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *fmt, ...);
 extern VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[]);
 
 

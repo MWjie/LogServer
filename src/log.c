@@ -18,7 +18,7 @@ extern "C" {
 #include <time.h>
 #include <signal.h>
 #define __USE_GNU
-#include <sched.h>  
+#include <sched.h>
 #include <pthread.h>
 
 #include "log.h"
@@ -46,10 +46,10 @@ INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *fmt, ...)
     gettimeofday(&stTimeVal, NULL);
     localtime_r(&stTimeVal.tv_sec, &stLocalTime);
 
-    ulStrLen += snprintf(szLogStr, sizeof(szLogStr), "%4d-%2d-%2d %2d:%2d:%2d %s[%d]: ",
+    ulStrLen += snprintf(szLogStr, sizeof(szLogStr), "%4d-%2d-%2d %02d:%02d:%02d %s[%d]: ",
                           stLocalTime.tm_year + 1900, stLocalTime.tm_mon + 1, stLocalTime.tm_mday,
                           stLocalTime.tm_hour, stLocalTime.tm_min, stLocalTime.tm_sec, __func__, __LINE__);
-    ulStrLen += snprintf(szLogStr + ulStrLen, sizeof(szLogStr) - ulStrLen, fmt, ap);
+    ulStrLen += vsnprintf(szLogStr + ulStrLen, sizeof(szLogStr) - ulStrLen, fmt, ap);
 
     pthread_mutex_lock(&pstLocalSyslog->mutex);
     write(pstLocalSyslog->fd, szLogStr, ulStrLen);
@@ -153,20 +153,23 @@ STATIC VOID LOG_CmdUsage(VOID)
     fprintf(stderr, "           ./logserver -s/-set CPU=0 \n");
     fprintf(stderr, "           ./logserver -s/-set PATH=./log \n");
     fprintf(stderr, "           ./logserver -s/-set Address=127.0.0.1:32001 CPU=0 \n");
-    fprintf(stderr, "------------------------------------------------------------ \n");
+    fprintf(stderr, "------------------------------------------------------------ \n\n");
     exit(1);
 }
 
 
 VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[])
 {
-	if (3 <= argc && (0 == strcasecmp(argv[1], "-s") || 0 == strcasecmp(argv[1], "-set")))
+    if (2 <= argc)
     {
-        LOG_CmdSet(argc - 2, &argv[2]);
-    }
-    else
-    {
-        LOG_CmdUsage();
+    	if (3 <= argc && (0 == strcasecmp(argv[1], "-s") || 0 == strcasecmp(argv[1], "-set")))
+        {
+            LOG_CmdSet(argc - 2, &argv[2]);
+        }
+        else
+        {
+            LOG_CmdUsage();
+        }
     }
 }
 

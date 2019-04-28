@@ -17,7 +17,7 @@ extern "C" {
 #include <time.h>
 #include <signal.h>
 #define __USE_GNU
-#include <sched.h>  
+#include <sched.h>
 #include <pthread.h>
 
 #include "log.h"
@@ -55,15 +55,12 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     g_pstLogServerContext->stLOGLocalSyslog.fd = open(LOG_LocalSysLogPath, O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (0 > g_pstLogServerContext->stLOGLocalSyslog.fd)
     {
+        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Open %s error!\n", LOG_LocalSysLogPath);
         return -1;
     }
 
     strncpy(g_pstLogServerContext->szFilePath, LOG_DefualtLogPath, strlen(LOG_DefualtLogPath));
-
-    if (2 <= argc)
-    {
-        LOG_ParsePara(argc, argv);
-    }
+    LOG_ParsePara(argc, argv);
 
     snprintf(szShellBuf, sizeof(szShellBuf), "mkdir -p %s", g_pstLogServerContext->szFilePath);
     system(szShellBuf);
