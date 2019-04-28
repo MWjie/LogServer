@@ -17,6 +17,7 @@ extern "C" {
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
+#include <sched.h>  
 #include <pthread.h>
 
 #include "log.h"
@@ -43,14 +44,14 @@ INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *fmt, ...)
 
     va_start(ap, fmt);
     gettimeofday(&stTimeVal, NULL);
-    localtime_r(&stTimeVal->tv_sec, &stLocalTime);
+    localtime_r(&stTimeVal.tv_sec, &stLocalTime);
 
-    ulStrLen += scnprintf(szLogStr, sizeof(szLogStr), "%4d-%02d-%02d %2d:%2d:2d %s[%d]: ",
+    ulStrLen += snprintf(szLogStr, sizeof(szLogStr), "%4d-%02d-%02d %2d:%2d:2d %s[%d]: ",
                           stLocalTime.tm_year + 1900, stLocalTime.tm_mon + 1, stLocalTime.tm_mday,
                           stLocalTime.tm_hour, stLocalTime.tm_min, stLocalTime.tm_sec, __FUNCTION__, __LINE__);
-    ulStrLen += scnprintf(szLogStr + ulStrLen, sizeof(szLogStr) - ulStrLen, fmt, ap);
+    ulStrLen += snprintf(szLogStr + ulStrLen, sizeof(szLogStr) - ulStrLen, fmt, ap);
 
-    pthread_mutex_tlock(&pstLocalSyslog->mutex);
+    pthread_mutex_lock(&pstLocalSyslog->mutex);
     write(pstLocalSyslog->fd, szLogStr, ulStrLen);
     pthread_mutex_unlock(&pstLocalSyslog->mutex);
 
@@ -77,7 +78,7 @@ STATIC VOID LOG_CmdSetAddr(IN CHAR *pcArgvContent)
     {
         sscanf(pcArgvContent, "%[^:]:%hu", g_szLogAddrIP, &g_usLogAddrPort);
         g_pstLogServerContext->usLogAddrPort = g_usLogAddrPort;
-        strlcpy(g_pstLogServerContext->szLogAddrIP, g_szLogAddrIP, sizeof(g_szLogAddrIP);
+        strncpy(g_pstLogServerContext->szLogAddrIP, g_szLogAddrIP, sizeof(g_szLogAddrIP));
         LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Set Address %s:%us\n", g_szLogAddrIP, g_usLogAddrPort);
     }
 
@@ -105,7 +106,7 @@ STATIC VOID LOG_CmdSetCPU(IN CHAR *pcArgvContent)
 
 STATIC VOID LOG_CmdSetPATH(IN CHAR *pcArgvContent)
 {
-    strlcpy(g_pstLogServerContext->szFilePath, pcArgvContent, strlen(pcArgvContent);
+    strncpy(g_pstLogServerContext->szFilePath, pcArgvContent, strlen(pcArgvContent));
     LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Set FilePath %s\n", pcArgvContent);
 
     return;

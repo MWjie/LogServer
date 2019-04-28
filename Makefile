@@ -99,7 +99,7 @@ ifeq ($(uname_S),DragonFly)
 else
 	# All the other OSes (notably Linux)
 	FINAL_LDFLAGS+= -rdynamic
-	FINAL_LIBS+=-ldl -pthread -lrt
+	FINAL_LIBS+=-ldl -lpthread -lrt
 endif
 endif
 endif

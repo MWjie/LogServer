@@ -16,6 +16,7 @@ extern "C" {
 #include <dirent.h>
 #include <time.h>
 #include <signal.h>
+#include <sched.h>  
 #include <pthread.h>
 
 #include "log.h"
@@ -34,11 +35,12 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     DIR *dir;
     struct dirent *ptr;
 
-    g_pstLogServerContext = (LOGServerContext_S *)calloc(sizeof(LOGServerContext_S));
+    g_pstLogServerContext = (LOGServerContext_S *)malloc(sizeof(LOGServerContext_S));
     if (NULL == g_pstLogServerContext)
     {
         return -1;
     }
+    memset(g_pstLogServerContext, 0x0, sizeof(LOGServerContext_S));
 
     CPU_ZERO(&mask);
     CPU_SET(0, &mask);
@@ -48,36 +50,36 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     srand(time(NULL) ^ getpid());
     g_pstLogServerContext->pid = getpid();
 
-    pthread_mutex_init(&g_pstLogServerContext.stLOGLocalSyslog.mutex, NULL);
+    pthread_mutex_init(&g_pstLogServerContext->stLOGLocalSyslog.mutex, NULL);
     g_pstLogServerContext->stLOGLocalSyslog.fd = open(LOG_LocalSysLogPath, O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (0 > g_pstLogServerContext->stLOGLocalSyslog.fd)
     {
         return -1;
     }
 
-    strlcpy(g_pstLogServerContext->szFilePath, LOG_DefualtLogPath, strlen(LOG_DefualtLogPath));
+    strncpy(g_pstLogServerContext->szFilePath, LOG_DefualtLogPath, strlen(LOG_DefualtLogPath));
 
     if (2 <= argc)
     {
         LOG_ParsePara(argc, argv);
     }
 
-    scnprintf(szShellBuf, sizeof(szShellBuf), "mkdir -p %s", g_pstLogServerContext->szFilePath);
+    snprintf(szShellBuf, sizeof(szShellBuf), "mkdir -p %s", g_pstLogServerContext->szFilePath);
     system(szShellBuf);
 
-    scnprintf(szShellBuf, sizeof(szShellBuf), "find %s -name *.bak -exec rm -rf {} \;", g_pstLogServerContext->szFilePath);
+    snprintf(szShellBuf, sizeof(szShellBuf), "find %s -name *.bak -exec rm -rf {} \;", g_pstLogServerContext->szFilePath);
     system(szShellBuf);
 
-    dir = opendir(g_pstLogServerContext->szFilePath);
-    while ((ptr = readdir(dir)) != NULL)
-    {
+    dir = opendir(g_pstLogServerContext->szFilePath);
+    while ((ptr = readdir(dir)) != NULL)
+    {
         if (0 != strcmp(ptr->d_name, ".") || 0 != strcmp(ptr->d_name, ".."))
         {
-            scnprintf(szFileName, sizeof(szFileName), "%s.bak", ptr->d_name);
+            snprintf(szFileName, sizeof(szFileName), "%s.bak", ptr->d_name);
             rename(ptr->d_name, szFileName);
         }
-    }
-    closedir(dir);
+    }
+    closedir(dir);
 
     return 0;
 }
