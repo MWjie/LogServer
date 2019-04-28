@@ -17,12 +17,12 @@ extern "C" {
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
+#define __USE_GNU
 #include <sched.h>  
 #include <pthread.h>
 
 #include "log.h"
 #include "util.h"
-
 
 #define LOG_LocalSysLogBufSize      ( 512UL )
 
@@ -46,9 +46,9 @@ INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *fmt, ...)
     gettimeofday(&stTimeVal, NULL);
     localtime_r(&stTimeVal.tv_sec, &stLocalTime);
 
-    ulStrLen += snprintf(szLogStr, sizeof(szLogStr), "%4d-%02d-%02d %2d:%2d:2d %s[%d]: ",
+    ulStrLen += snprintf(szLogStr, sizeof(szLogStr), "%4d-%2d-%2d %2d:%2d:%2d %s[%d]: ",
                           stLocalTime.tm_year + 1900, stLocalTime.tm_mon + 1, stLocalTime.tm_mday,
-                          stLocalTime.tm_hour, stLocalTime.tm_min, stLocalTime.tm_sec, __FUNCTION__, __LINE__);
+                          stLocalTime.tm_hour, stLocalTime.tm_min, stLocalTime.tm_sec, __func__, __LINE__);
     ulStrLen += snprintf(szLogStr + ulStrLen, sizeof(szLogStr) - ulStrLen, fmt, ap);
 
     pthread_mutex_lock(&pstLocalSyslog->mutex);

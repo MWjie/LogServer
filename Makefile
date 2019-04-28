@@ -136,7 +136,7 @@ $(DIR_OBJ)/%.o: $(DIR_SRC)/%.c
 	$(LOG_CC) $(CFLAGS) -c $< -o $@
 
 $(BIN_TARGET): $(OBJ_TARGET)
-	$(LOG_LD) $(OBJ_TARGET) -o $@ #$^ $(FINAL_LIBS)
+	$(LOG_LD) $(OBJ_TARGET) -o $@ $(FINAL_LIBS)
 
 .PHONY: clean
 clean:

@@ -16,6 +16,7 @@ extern "C" {
 #include <dirent.h>
 #include <time.h>
 #include <signal.h>
+#define __USE_GNU
 #include <sched.h>  
 #include <pthread.h>
 
@@ -67,7 +68,7 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     snprintf(szShellBuf, sizeof(szShellBuf), "mkdir -p %s", g_pstLogServerContext->szFilePath);
     system(szShellBuf);
 
-    snprintf(szShellBuf, sizeof(szShellBuf), "find %s -name *.bak -exec rm -rf {} \;", g_pstLogServerContext->szFilePath);
+    snprintf(szShellBuf, sizeof(szShellBuf), "find %s -name *.bak -exec rm -rf {} \\;", g_pstLogServerContext->szFilePath);
     system(szShellBuf);
 
     dir = opendir(g_pstLogServerContext->szFilePath);
