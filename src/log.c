@@ -33,7 +33,7 @@ extern LOGServerContext_S *g_pstLogServerContext;
 
 
 
-INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *fmt, ...)
+INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc, IN INT uiLine, IN CHAR *fmt, ...)
 {
     va_list ap;
     struct timeval stTimeVal;
@@ -48,7 +48,7 @@ INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *fmt, ...)
 
     ulStrLen += snprintf(szLogStr, sizeof(szLogStr), "%4d-%2d-%2d %02d:%02d:%02d %s[%d]: ",
                           stLocalTime.tm_year + 1900, stLocalTime.tm_mon + 1, stLocalTime.tm_mday,
-                          stLocalTime.tm_hour, stLocalTime.tm_min, stLocalTime.tm_sec, __func__, __LINE__);
+                          stLocalTime.tm_hour, stLocalTime.tm_min, stLocalTime.tm_sec, pcFunc, uiLine);
     ulStrLen += vsnprintf(szLogStr + ulStrLen, sizeof(szLogStr) - ulStrLen, fmt, ap);
 
     pthread_mutex_lock(&pstLocalSyslog->mutex);
@@ -69,7 +69,7 @@ STATIC VOID LOG_CmdSetAddr(IN CHAR *pcArgvContent)
     pcAddrPort = strchr(pcArgvContent, ':');
     if (NULL == pcAddrPort)
     {
-        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Set Address error!\n");
+        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Set Address error!\n");
         return;
     }
 
@@ -79,7 +79,8 @@ STATIC VOID LOG_CmdSetAddr(IN CHAR *pcArgvContent)
         sscanf(pcArgvContent, "%[^:]:%hu", g_szLogAddrIP, &g_usLogAddrPort);
         g_pstLogServerContext->usLogAddrPort = g_usLogAddrPort;
         strncpy(g_pstLogServerContext->szLogAddrIP, g_szLogAddrIP, sizeof(g_szLogAddrIP));
-        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Set Address %s:%us\n", g_szLogAddrIP, g_usLogAddrPort);
+        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__,
+                        "Set Address %s:%u\n", g_szLogAddrIP, g_usLogAddrPort);
     }
 
     return;
@@ -97,9 +98,10 @@ STATIC VOID LOG_CmdSetCPU(IN CHAR *pcArgvContent)
     CPU_SET(uiTargeCPU, &mask);
     if (-1 == sched_setaffinity(0, sizeof(cpu_set_t), &mask))
     {
-        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Set CPU affinity error!\n");
+        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Set CPU affinity error!\n");
+        return;
     }
-    LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Set CPU%u affinity\n", uiTargeCPU);
+    LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Set CPU%u affinity\n", uiTargeCPU);
 
     return;
 }
@@ -107,7 +109,7 @@ STATIC VOID LOG_CmdSetCPU(IN CHAR *pcArgvContent)
 STATIC VOID LOG_CmdSetPATH(IN CHAR *pcArgvContent)
 {
     strncpy(g_pstLogServerContext->szFilePath, pcArgvContent, strlen(pcArgvContent));
-    LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Set FilePath %s\n", pcArgvContent);
+    LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Set FilePath %s\n", pcArgvContent);
 
     return;
 }
@@ -151,7 +153,7 @@ STATIC VOID LOG_CmdUsage(VOID)
     fprintf(stderr, "       (2) ./logserver -h/-help \n");
     fprintf(stderr, "       (3) ./logserver -s/-set Address=127.0.0.1:32001 \n");
     fprintf(stderr, "           ./logserver -s/-set CPU=0 \n");
-    fprintf(stderr, "           ./logserver -s/-set PATH=./log \n");
+    fprintf(stderr, "           ./logserver -s/-set PATH=./Log/ \n");
     fprintf(stderr, "           ./logserver -s/-set Address=127.0.0.1:32001 CPU=0 \n");
     fprintf(stderr, "------------------------------------------------------------ \n\n");
     exit(1);

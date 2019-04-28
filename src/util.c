@@ -31,7 +31,7 @@ INT LOG_CheckAddrIPv4(IN CHAR *pcAddrIP)
 
     if (NULL == pcAddrIP)
     {
-        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Check IP error!\n");
+        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Check IP error!\n");
         return -1;
     }
 
@@ -39,12 +39,11 @@ INT LOG_CheckAddrIPv4(IN CHAR *pcAddrIP)
     {
         if (255 >= uiAddr1 || 255 >= uiAddr2 || 255 >= uiAddr3 || 255 >= uiAddr4)
         {
-            LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Check IP %s success\n", pcAddrIP);
             return 0;
         }
     }
 
-    LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Check IP error!\n");
+    LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Check IP error!\n");
     return -1;
 }
 
@@ -55,18 +54,17 @@ INT LOG_CheckAddrPort(IN CHAR *pcAddrPort)
 
     if (NULL == pcAddrPort)
     {
-        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Check port error!\n");
+        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Check port error!\n");
         return -1;
     }
 
     uiAddrPort = atoi(pcAddrPort);
     if (65535 >= uiAddrPort)
     {
-        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Check port %s success\n", pcAddrPort);
         return 0;
     }
 
-    LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Check port error!\n");
+    LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Check port error!\n");
 	return -1;
 }
 

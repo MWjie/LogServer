@@ -32,6 +32,7 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
 {
     CHAR szShellBuf[128];
     CHAR szFileName[128];
+    CHAR szOldFile[128];
     cpu_set_t mask;
     DIR *dir;
     struct dirent *ptr;
@@ -55,7 +56,7 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     g_pstLogServerContext->stLOGLocalSyslog.fd = open(LOG_LocalSysLogPath, O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (0 > g_pstLogServerContext->stLOGLocalSyslog.fd)
     {
-        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, "Open %s error!\n", LOG_LocalSysLogPath);
+        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Open %s error!\n", LOG_LocalSysLogPath);
         return -1;
     }
 
@@ -69,12 +70,13 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     system(szShellBuf);
 
     dir = opendir(g_pstLogServerContext->szFilePath);
-    while ((ptr = readdir(dir)) != NULL)
+    while (NULL != (ptr = readdir(dir)))
     {
-        if (0 != strcmp(ptr->d_name, ".") || 0 != strcmp(ptr->d_name, ".."))
+        if (0 != strcmp(ptr->d_name, ".") && 0 != strcmp(ptr->d_name, ".."))
         {
-            snprintf(szFileName, sizeof(szFileName), "%s.bak", ptr->d_name);
-            rename(ptr->d_name, szFileName);
+            snprintf(szFileName, sizeof(szFileName), "%s%s.bak", g_pstLogServerContext->szFilePath, ptr->d_name);
+            snprintf(szOldFile,  sizeof(szOldFile),  "%s%s",     g_pstLogServerContext->szFilePath, ptr->d_name);
+            rename(szOldFile, szFileName);
         }
     }
     closedir(dir);
