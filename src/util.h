@@ -6,6 +6,10 @@ extern "C" {
 #endif
 
 
+extern INT LOG_CheckAddrIPv4(IN CHAR *pcAddrIP);
+extern INT LOG_CheckAddrPort(IN CHAR *pcAddrPort);
+
+
 #ifdef __cplusplus
 }
 #endif

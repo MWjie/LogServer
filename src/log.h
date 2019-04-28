@@ -24,10 +24,24 @@ typedef unsigned long long  UINT64;
 #define STATIC  static
 
 
-extern VOID LOG_CmdUsage(VOID);
-extern VOID LOG_CmdSet(IN CHAR *pcAddrStr);
+typedef struct LOG_LocalSyslog {
+    INT fd;                                 /* File descriptor */
+    pthread_mutex_t mutex;                  /* Mutex */
+} LOGLocalSyslog_S;
+
+typedef struct LOG_ServerContext {
+    /* General */
+    pid_t pid;                              /* Main process pid. */
+    UINT uiTargeCPU;                        /* CPU affinity */
+    CHAR szFilePath[128];                   /* Log Path */
+    CHAR szLogAddrIP[16];                   /* Log Server IP Address */
+    USHORT usLogAddrPort;                   /* Log Server IP Port */
+    LOGLocalSyslog_S stLOGLocalSyslog;      /* Local Syslog */
+} LOGServerContext_S;
 
 
+
+extern VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[]);
 
 
 #ifdef __cplusplus
