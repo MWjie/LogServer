@@ -17,6 +17,7 @@ extern "C" {
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
+#include <errno.h>
 #define __USE_GNU
 #include <sched.h>
 #include <pthread.h>
@@ -87,13 +88,13 @@ STATIC VOID LOG_CmdSetCPU(IN CHAR *pcArgvContent)
     g_pstLogServerContext->bIsCPUAffinity = 1;
 
     CPU_ZERO(&mask);
-    CPU_SET(uiTargeCPU, &mask);
+    CPU_SET(usTargeCPU, &mask);
     if (-1 == sched_setaffinity(0, sizeof(cpu_set_t), &mask))
     {
         LOG_RawSysLog("Set CPU affinity error!\n");
         return;
     }
-    LOG_RawSysLog("Set CPU%u affinity\n", uiTargeCPU);
+    LOG_RawSysLog("Set CPU%u affinity\n", usTargeCPU);
 
     return;
 }

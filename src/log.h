@@ -57,12 +57,12 @@ extern INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc,
 extern VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[]);
 
 
-#define LOG_RawSysLog(fmt, args...) \
+#define LOG_RawSysLog(fmt, ...) \
     do \
     { \
         if (1 == g_pstLogServerContext->bIsLocalSyslog) \
         { \
-            LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, fmt, ##args); \
+            LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, fmt, ##__VA_ARGS__); \
         } \
     } while (0)
 

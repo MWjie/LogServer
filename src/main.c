@@ -6,16 +6,20 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <time.h>
 #include <signal.h>
+#include <errno.h>
 #define __USE_GNU
 #include <sched.h>
 #include <pthread.h>
@@ -103,7 +107,7 @@ STATIC INT LOG_CreateEpollEvent(VOID)
     LONG lRecvLen   = 0;
     CHAR *pcRcvBuf  = NULL;
 
-    sockaddr_in ClientAddr;
+    struct sockaddr_in ClientAddr;
     socklen_t iAddrLen = sizeof(ClientAddr);
     struct sockaddr_in serveraddr;
     struct epoll_event ev;
@@ -156,7 +160,7 @@ STATIC INT LOG_CreateEpollEvent(VOID)
 
     for (;;)
     {
-        infds = epoll_wait(epollfd, events, curfds, -1);
+        infds = epoll_wait(epollfd, events, LOG_MaxEpollNum, -1);
         if (infds == -1)
         {
             continue;
@@ -164,15 +168,15 @@ STATIC INT LOG_CreateEpollEvent(VOID)
 
         for (iIndex = 0; iIndex < infds; iIndex++)
         {
-            if (0 != events[i].events & EPOLLERR || 0 != events[i].events & EPOLLHUP)
+            if (0 != (events[iIndex].events & EPOLLERR) || 0 != (events[iIndex].events & EPOLLHUP))
             {
                 continue;
             }
 
-            if (0 != events[i].events & EPOLLIN)
+            if (0 != (events[iIndex].events & EPOLLIN))
             {
-                lRecvLen = recvfrom(events[iIndex].data.fd, pcRcvBuf, LOG_EpollRcvBufSize, 0,
-                                    (sockaddr *)&ClientAddr, &iAddrLen);
+                lRecvLen = recvfrom(events[iIndex].data.fd, pcRcvBuf, LOG_EpollRcvBufSize, 0, 
+								    (struct sockaddr *)&ClientAddr, &iAddrLen);
             }
         }
     }
