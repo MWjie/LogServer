@@ -19,8 +19,6 @@ extern "C" {
 
 #include "log.h"
 
-extern LOGServerContext_S *g_pstLogServerContext;
-
 
 INT LOG_CheckAddrIPv4(IN CHAR *pcAddrIP)
 {
@@ -31,7 +29,6 @@ INT LOG_CheckAddrIPv4(IN CHAR *pcAddrIP)
 
     if (NULL == pcAddrIP)
     {
-        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Check IP error!\n");
         return -1;
     }
 
@@ -43,7 +40,6 @@ INT LOG_CheckAddrIPv4(IN CHAR *pcAddrIP)
         }
     }
 
-    LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Check IP error!\n");
     return -1;
 }
 
@@ -54,7 +50,6 @@ INT LOG_CheckAddrPort(IN CHAR *pcAddrPort)
 
     if (NULL == pcAddrPort)
     {
-        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Check port error!\n");
         return -1;
     }
 
@@ -64,7 +59,6 @@ INT LOG_CheckAddrPort(IN CHAR *pcAddrPort)
         return 0;
     }
 
-    LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Check port error!\n");
 	return -1;
 }
 
