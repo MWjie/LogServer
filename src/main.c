@@ -63,7 +63,7 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     g_pstLogServerContext->stLOGLocalSyslog.fd = open(LOG_LocalSysLogPath, O_WRONLY | O_CREAT | O_APPEND, 0666);
     if (0 > g_pstLogServerContext->stLOGLocalSyslog.fd)
     {
-        LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, "Open %s error!\n", LOG_LocalSysLogPath);
+        LOG_RawSysLog("Open %s error!\n", LOG_LocalSysLogPath);
         return -1;
     }
 
@@ -175,7 +175,7 @@ STATIC INT LOG_CreateEpollEvent(VOID)
 
             if (0 != (events[iIndex].events & EPOLLIN))
             {
-                lRecvLen = recvfrom(events[iIndex].data.fd, pcRcvBuf, LOG_EpollRcvBufSize, 0, 
+                lRecvLen = recvfrom(events[iIndex].data.fd, pcRcvBuf, LOG_EpollRcvBufSize, 0,
 								    (struct sockaddr *)&ClientAddr, &iAddrLen);
             }
         }
