@@ -23,9 +23,7 @@ typedef unsigned long long  UINT64;
 #define INOUT
 #define STATIC      static
 #define BOOL        USHORT
-#define __FILE__            __FILE__
-#define __LINE__            __LINE__
-#define __FUNCTION__        __func__
+
 
 typedef enum LOG_Level {
     LOG_ERROR = 0,
@@ -64,7 +62,7 @@ extern VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[]);
     { \
         if (1 == g_pstLogServerContext->bIsLocalSyslog) \
         { \
-            LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __FUNCTION__, __LINE__, fmt, ##args); \
+            LOG_LocalSyslog(&g_pstLogServerContext->stLOGLocalSyslog, __func__, __LINE__, fmt, ##args); \
         } \
     } while (0)
 

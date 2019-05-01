@@ -79,11 +79,11 @@ STATIC VOID LOG_CmdSetAddr(IN CHAR *pcArgvContent)
 
 STATIC VOID LOG_CmdSetCPU(IN CHAR *pcArgvContent)
 {
-    UINT uiTargeCPU;
+    UINT usTargeCPU;
     cpu_set_t mask;
 
-    uiTargeCPU = (UINT)atoi(pcArgvContent);
-    g_pstLogServerContext->uiTargeCPU     = uiTargeCPU;
+    usTargeCPU = (USHORT)atoi(pcArgvContent);
+    g_pstLogServerContext->usTargeCPU     = usTargeCPU;
     g_pstLogServerContext->bIsCPUAffinity = 1;
 
     CPU_ZERO(&mask);
