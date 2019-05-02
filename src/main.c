@@ -177,6 +177,10 @@ STATIC INT LOG_CreateEpollEvent(VOID)
             {
                 lRecvLen = recvfrom(events[iIndex].data.fd, pcRcvBuf, LOG_EpollRcvBufSize, 0,
 								    (struct sockaddr *)&ClientAddr, &iAddrLen);
+                if (0 < lRecvLen)
+                {
+
+                }
             }
         }
     }

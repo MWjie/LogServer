@@ -41,9 +41,9 @@ INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc, IN INT
     gettimeofday(&stTimeVal, NULL);
     localtime_r(&stTimeVal.tv_sec, &stLocalTime);
 
-    ulStrLen += snprintf(szLogStr, sizeof(szLogStr), "[%4d-%2d-%2d %02d:%02d:%02d] %s[%d]: ",
-                          stLocalTime.tm_year + 1900, stLocalTime.tm_mon + 1, stLocalTime.tm_mday,
-                          stLocalTime.tm_hour, stLocalTime.tm_min, stLocalTime.tm_sec, pcFunc, uiLine);
+    ulStrLen += snprintf(szLogStr, sizeof(szLogStr), "[%4d-%2d-%2d %02d:%02d:%02d.%d] %s[%d]: ",
+                         stLocalTime.tm_year + 1900, stLocalTime.tm_mon + 1, stLocalTime.tm_mday,
+                         stLocalTime.tm_hour, stLocalTime.tm_min, stLocalTime.tm_sec, stTimeVal.tv_usec, pcFunc, uiLine);
     ulStrLen += vsnprintf(szLogStr + ulStrLen, sizeof(szLogStr) - ulStrLen, fmt, ap);
 
     pthread_mutex_lock(&pstLocalSyslog->mutex);
