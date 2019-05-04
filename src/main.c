@@ -168,8 +168,11 @@ STATIC INT LOG_CreateEpollEvent(VOID)
 
         for (iIndex = 0; iIndex < infds; iIndex++)
         {
-            if (0 != (events[iIndex].events & EPOLLERR) || 0 != (events[iIndex].events & EPOLLHUP))
+            if (0 != (events[iIndex].events & (EPOLLERR | EPOLLHUP))
             {
+                iErron = errno;
+                LOG_RawSysLog("epoll error, erron: %d\n", iErron);
+                close(events[i].data.fd);
                 continue;
             }
 
