@@ -16,6 +16,7 @@ extern "C" {
 #include <time.h>
 #include <signal.h>
 #include <pthread.h>
+#include <sys/mman.h>
 
 #include "util.h"
 
