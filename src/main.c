@@ -156,7 +156,7 @@ STATIC INT LOG_CreateEpollEvent(VOID)
         LOG_RawSysLog("epoll add error, erron: %d\n", iErron);
         close(socketfd);
         return -1;
-    }
+    
 
     for (;;)
     {
