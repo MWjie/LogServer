@@ -14,11 +14,62 @@ extern "C" {
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
+#define __USE_POSIX
 #include <signal.h>
 #include <pthread.h>
 #include <sys/mman.h>
 
 #include "util.h"
+
+INT LOG_System_s(IN CHAR *pcCmd)
+{
+    INT iPid     = 0;
+    INT iStatus  = -1;
+    INT iWaitPid = 0;
+    struct sigaction stIgnore, stSaveIntr, stSaveQuit;
+    sigset_t stChildMask, stSaveMask;
+    
+    if (NULL == pcCmd)
+    {
+        return -1;
+    }
+
+    stIgnore.sa_handler = SIG_IGN;
+    stIgnore.sa_flags   = 0;
+    sigemptyset(&stIgnore.sa_mask);
+    (VOID)sigaction(SIGINT,  &stIgnore, &stSaveIntr);
+    (VOID)sigaction(SIGQUIT, &stIgnore, &stSaveQuit);
+    sigemptyset(&stChildMask);
+    sigaddset(&stChildMask, SIGCHLD);
+    (VOID)sigprocmask(SIG_BLOCK, &stChildMask, &stSaveMask);
+
+    iPid = vfork();
+    if (0 > iPid)
+    {
+        iStatus = -1;
+    }
+    else if (0 == iPid)
+    {
+        (VOID)sigaction(SIGINT,  &stSaveIntr, NULL);
+        (VOID)sigaction(SIGQUIT, &stSaveQuit, NULL);
+        (VOID)sigprocmask(SIG_SETMASK, &stSaveMask, (sigset_t *)NULL);
+        (VOID)execl("/bin/sh", "sh", "-c", pcCmd, (CHAR *)NULL);
+        _exit(127);
+    }
+    else
+    {
+        iWaitPid = waitpid(iPid, (INT *)&iStatus, 0);
+        if (0 > iWaitPid)
+        {
+            iStatus = -1;
+        }
+    }
+    (VOID)sigaction(SIGINT,  &stSaveIntr, NULL);
+    (VOID)sigaction(SIGQUIT, &stSaveQuit, NULL);
+    (VOID)sigprocmask(SIG_SETMASK, &stSaveMask, (sigset_t *)NULL);
+        
+    return 0;
+}
 
 
 INT LOG_OpenShm(IN CHAR *pcShmName, IN ULONG ulShmSize)

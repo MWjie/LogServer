@@ -20,11 +20,13 @@ extern "C" {
 #include <time.h>
 #include <signal.h>
 #include <errno.h>
-#define __USE_GNU
+#define __USE_POSIX
 #include <sched.h>
 #include <pthread.h>
 
 #include "log.h"
+
+//#define LOG_Test
 
 #define LOG_LocalSysLogPath         ( "./LocalSysLog" )
 #define LOG_DefualtLogPath          ( "./Log/" )
@@ -68,16 +70,16 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     }
 
     g_pstLogServerContext->usLogAddrPort = LOG_DefaultAddrPort;
-    strncpy(g_pstLogServerContext->szLogAddrIP, LOG_DefaultAddrIP, sizeof(LOG_DefaultAddrIP));
-    strncpy(g_pstLogServerContext->szFilePath, LOG_DefualtLogPath, sizeof(LOG_DefualtLogPath));
+    strncpy(g_pstLogServerContext->szLogAddrIP, LOG_DefaultAddrIP,  sizeof(LOG_DefaultAddrIP));
+    strncpy(g_pstLogServerContext->szFilePath,  LOG_DefualtLogPath, sizeof(LOG_DefualtLogPath));
 
     LOG_ParsePara(argc, argv);
 
     snprintf(szShellBuf, sizeof(szShellBuf), "mkdir -p %s", g_pstLogServerContext->szFilePath);
-    system(szShellBuf);
+    LOG_System_s(szShellBuf);
 
     snprintf(szShellBuf, sizeof(szShellBuf), "find %s -name *.bak -exec rm -rf {} \\;", g_pstLogServerContext->szFilePath);
-    system(szShellBuf);
+    LOG_System_s(szShellBuf);
 
     dir = opendir(g_pstLogServerContext->szFilePath);
     while (NULL != (ptr = readdir(dir)))
@@ -204,6 +206,14 @@ INT main(IN INT argc, IN CHAR *argv[])
         printf("LOG_InitContext error!\n");
         return -1;
     }
+
+#ifdef LOG_Test
+    LOG_System_s("uname -a");
+    for (;;) 
+    {
+        sleep(1);
+    }
+#endif
 
     LOG_CreateEpollEvent();
 
