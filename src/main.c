@@ -25,6 +25,8 @@ extern "C" {
 #include <pthread.h>
 
 #include "log.h"
+#include "release.h"
+
 
 //#define LOG_Test
 
@@ -158,7 +160,7 @@ STATIC INT LOG_CreateEpollEvent(VOID)
         LOG_RawSysLog("epoll add error, erron: %d\n", iErron);
         close(socketfd);
         return -1;
-    } 
+    }
 
     for (;;)
     {
@@ -181,7 +183,7 @@ STATIC INT LOG_CreateEpollEvent(VOID)
             if (0 != (events[iIndex].events & EPOLLIN))
             {
                 lRecvLen = recvfrom(events[iIndex].data.fd, pcRcvBuf, LOG_EpollRcvBufSize, 0,
-								    (struct sockaddr *)&ClientAddr, &iAddrLen);
+                                    (struct sockaddr *)&ClientAddr, &iAddrLen);
                 if (0 < lRecvLen)
                 {
 
@@ -196,11 +198,20 @@ STATIC INT LOG_CreateEpollEvent(VOID)
     return 0;
 }
 
-
+STATIC VOID LOG_Version(VOID) 
+{
+    printf("LOG server v=%s sha=%s:%d bits=%d build=%s\n",
+            LOG_VERSION,
+            LOG_GIT_SHA1,
+            atoi(LOG_GIT_DIRTY) > 0,
+            sizeof(LONG) == 4 ? 32 : 64,
+            LOG_BUILD_ID);
+    exit(0);
+}
 
 INT main(IN INT argc, IN CHAR *argv[])
 {
-
+    LOG_Version();
     if (0 != LOG_InitContext(argc, argv))
     {
         printf("LOG_InitContext error!\n");
@@ -209,7 +220,7 @@ INT main(IN INT argc, IN CHAR *argv[])
 
 #ifdef LOG_Test
     LOG_System_s("uname -a");
-    for (;;) 
+    for (;;)
     {
         sleep(1);
     }

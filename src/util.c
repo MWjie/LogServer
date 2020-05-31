@@ -28,7 +28,7 @@ INT LOG_System_s(IN CHAR *pcCmd)
     INT iWaitPid = 0;
     struct sigaction stIgnore, stSaveIntr, stSaveQuit;
     sigset_t stChildMask, stSaveMask;
-    
+
     if (NULL == pcCmd)
     {
         return -1;
@@ -67,7 +67,7 @@ INT LOG_System_s(IN CHAR *pcCmd)
     (VOID)sigaction(SIGINT,  &stSaveIntr, NULL);
     (VOID)sigaction(SIGQUIT, &stSaveQuit, NULL);
     (VOID)sigprocmask(SIG_SETMASK, &stSaveMask, (sigset_t *)NULL);
-        
+
     return 0;
 }
 
@@ -164,7 +164,7 @@ INT LOG_CheckAddrPort(IN CHAR *pcAddrPort)
         return 0;
     }
 
-	return -1;
+    return -1;
 }
 
 

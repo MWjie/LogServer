@@ -145,6 +145,32 @@ STATIC VOID LOG_CmdSet(IN INT argc, IN CHAR *argv[])
 }
 
 
+STATIC VOID LOG_Daemonize(VOID)
+{
+    INT fd;
+
+    if (0 != fork()) 
+    {
+        exit(0); /* parent exits */
+    }
+    setsid(); /* create a new session */
+
+    /* Every output goes to /dev/null. If Redis is daemonized but
+     * the 'logfile' is set to 'stdout' in the configuration file
+     * it will not log at all. */
+    if (-1 != (fd = open("/dev/null", O_RDWR, 0)))
+    {
+        dup2(fd, STDIN_FILENO);
+        dup2(fd, STDOUT_FILENO);
+        dup2(fd, STDERR_FILENO);
+        if (fd > STDERR_FILENO)
+        {
+            close(fd);
+        }
+    }
+}
+
+
 STATIC VOID LOG_CmdUsage(VOID)
 {
     fprintf(stderr, "------------------------------------------------------------ \n");
@@ -164,7 +190,7 @@ VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[])
 {
     if (2 <= argc)
     {
-    	if (3 <= argc && (0 == strcasecmp(argv[1], "-s") || 0 == strcasecmp(argv[1], "-set")))
+        if (3 <= argc && (0 == strcasecmp(argv[1], "-s") || 0 == strcasecmp(argv[1], "-set")))
         {
             LOG_CmdSet(argc - 2, &argv[2]);
         }

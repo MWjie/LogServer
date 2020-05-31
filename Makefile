@@ -144,4 +144,4 @@ clean:
 
 .PHONY: distclean
 distclean:
-	rm -rf ${DIR_OBJ} ${DIR_BIN} release.h LocalSysLog LOG/
+	rm -rf ${DIR_OBJ} ${DIR_BIN} ./src/release.h LocalSysLog LOG/
