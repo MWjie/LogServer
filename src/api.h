@@ -6,8 +6,7 @@ extern "C" {
 #endif
 
 
-
-typedef void                VOID;
+/* type definitions */
 typedef char                CHAR;
 typedef short               SHORT;
 typedef int                 INT;
@@ -23,8 +22,23 @@ typedef unsigned long long  UINT64;
 #define IN
 #define OUT
 #define INOUT
-#define STATIC      static
-#define BOOL        USHORT
+#define STATIC              static
+#define BOOL                USHORT
+
+#define VOID               void
+#define STATIC             static
+
+#ifndef FALSE
+#define FALSE              0U
+#endif
+
+#ifndef TRUE
+#define TRUE               1U
+#endif
+
+#ifndef NULL
+#define NULL               ((VOID *)0)
+#endif
 
 
 typedef enum LOG_Level {

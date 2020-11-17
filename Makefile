@@ -128,19 +128,33 @@ LOG_CC			= $(QUIET_CC)$(CC) $(FINAL_CFLAGS)
 LOG_LD			= $(QUIET_LINK)$(CC) $(FINAL_LDFLAGS)
 LOG_INSTALL		= $(QUIET_INSTALL)$(INSTALL)
 
-SERVER_NAME		= LogServer
-BIN_TARGET 		= $(DIR_BIN)/$(SERVER_NAME)
+LOG_SERVER_NAME	= $(DIR_BIN)/LogServer
+LOG_CLI_NAME	= $(DIR_BIN)/LogClient
+LOG_SERVER_OBJ	= $(DIR_OBJ)/log.o $(DIR_OBJ)/util.o $(DIR_OBJ)/server.o
+LOG_CLI_OBJ		= $(DIR_OBJ)/client.o
 OBJ_TARGET 		= $(patsubst %.c,$(DIR_OBJ)/%.o,$(notdir $(wildcard ${DIR_SRC}/*.c)))
+
+all: $(LOG_SERVER_NAME) $(LOG_CLI_NAME)
+	@echo ""
+	@echo "Hint: It's a good idea to run 'make test' ;)"
+	@echo ""
 
 $(DIR_OBJ)/%.o: $(DIR_SRC)/%.c
 	$(LOG_CC) $(CFLAGS) -c $< -o $@
 
-$(BIN_TARGET): $(OBJ_TARGET)
-	$(LOG_LD) $(OBJ_TARGET) -o $@ $(FINAL_LIBS)
+# log-server
+$(LOG_SERVER_NAME): $(LOG_SERVER_OBJ)
+	$(LOG_LD) -o $@ $^ $(FINAL_LIBS)
+
+# log-cli
+$(LOG_CLI_NAME): $(LOG_CLI_OBJ)
+	$(LOG_LD) -o $@ $^ $(FINAL_LIBS)
+
 
 .PHONY: clean
 clean:
-	rm -rf ${DIR_OBJ}/*.o
+	#rm -rf ${DIR_OBJ}/*.o
+	rm -rf ${DIR_OBJ} ${DIR_BIN} ./src/release.h LocalSysLog LOG/
 
 .PHONY: distclean
 distclean:
