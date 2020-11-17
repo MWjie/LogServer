@@ -30,114 +30,10 @@ extern "C" {
 
 #define LOG_Test
 
-#define LOG_LocalSysLogPath         ( "./LocalSysLog" )
-#define LOG_DefualtLogPath          ( "./Log/" )
 #define LOG_DefaultAddrIP           ( "127.0.0.1" )
 #define LOG_DefaultAddrPort         ( 32001 )
-#define LOG_SysLogSwitch            ( 1 )
-#define LOG_MaxEpollNum             ( 8 )
 #define LOG_EpollRcvBufSize         ( 4 * 1024 )
 
-
-STATIC INT LOG_CreateEpollEvent(VOID)
-{
-    INT socketfd    = -1;
-    INT epollfd     = -1;
-    INT iErron      = 0;
-    INT iNoblock    = 1;
-    INT iReuseAddr  = 1;
-    INT iRcvBuf     = LOG_EpollRcvBufSize;
-    INT infds       = -1;
-    INT iIndex      = 0;
-    LONG lRecvLen   = 0;
-    CHAR *pcRcvBuf  = NULL;
-
-    struct sockaddr_in ClientAddr;
-    socklen_t iAddrLen = sizeof(ClientAddr);
-    struct sockaddr_in serveraddr;
-    struct epoll_event ev;
-    struct epoll_event events[LOG_MaxEpollNum];
-
-    pcRcvBuf = (CHAR *)malloc(iRcvBuf * sizeof(CHAR));
-    if (NULL == pcRcvBuf)
-    {
-        iErron = errno;
-        LOG_RawSysLog("malloc error, erron: %d\n", iErron);
-        return -1;
-    }
-
-    bzero(&serveraddr, sizeof(serveraddr));
-    serveraddr.sin_family = AF_INET;
-    serveraddr.sin_addr.s_addr = inet_addr(g_pstLogServerContext->szLogAddrIP);
-    serveraddr.sin_port = htons(g_pstLogServerContext->usLogAddrPort);
-
-    socketfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (-1 == socketfd)
-    {
-        iErron = errno;
-        LOG_RawSysLog("socket error, erron: %d\n", iErron);
-        return -1;
-    }
-
-    setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, (const CHAR *)&iReuseAddr, sizeof(iReuseAddr));
-    setsockopt(socketfd, SOL_SOCKET, SO_RCVBUF, (const CHAR *)&iRcvBuf, sizeof(iRcvBuf));
-    ioctl(socketfd, FIONBIO, &iNoblock);
-
-    if (-1 == bind(socketfd, (struct sockaddr *)&serveraddr, sizeof(struct sockaddr)))
-    {
-        iErron = errno;
-        LOG_RawSysLog("bind error, erron: %d\n", iErron);
-        close(socketfd);
-        return -1;
-    }
-
-    epollfd    = epoll_create(LOG_MaxEpollNum);
-    ev.events  = EPOLLIN;
-    ev.data.fd = socketfd;
-
-    if (0 > epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &ev))
-    {
-        iErron = errno;
-        LOG_RawSysLog("epoll add error, erron: %d\n", iErron);
-        close(socketfd);
-        return -1;
-    }
-
-    for (;;)
-    {
-        infds = epoll_wait(epollfd, events, LOG_MaxEpollNum, -1);
-        if (infds == -1)
-        {
-            continue;
-        }
-
-        for (iIndex = 0; iIndex < infds; iIndex++)
-        {
-            if (0 != (events[iIndex].events & (EPOLLERR | EPOLLHUP)))
-            {
-                iErron = errno;
-                LOG_RawSysLog("epoll error, erron: %d\n", iErron);
-                close(events[iIndex].data.fd);
-                continue;
-            }
-
-            if (0 != (events[iIndex].events & EPOLLIN))
-            {
-                lRecvLen = recvfrom(events[iIndex].data.fd, pcRcvBuf, LOG_EpollRcvBufSize, 0,
-                                    (struct sockaddr *)&ClientAddr, &iAddrLen);
-                if (0 < lRecvLen)
-                {
-
-                }
-            }
-        }
-    }
-
-    close(epollfd);
-    close(socketfd);
-
-    return 0;
-}
 
 STATIC VOID LOG_Version(VOID) 
 {
@@ -147,7 +43,73 @@ STATIC VOID LOG_Version(VOID)
             atoi(LOG_GIT_DIRTY) > 0,
             sizeof(LONG) == 4 ? 32 : 64,
             LOG_BUILD_ID);
-    exit(0);
+}
+
+STATIC INT LOG_InitClientFd(VOID)
+{
+    INT socketfd    = -1;
+    INT iErron      = 0;
+    STATIC USHORT usClientPort = LOG_DefaultAddrPort;
+    struct sockaddr_in clientaddr;
+
+    socketfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (-1 == socketfd)
+    {
+        iErron = errno;
+        fprintf(stderr, "socket errno = %d", iErron);
+        return -1;
+    }
+ 
+    bzero(&clientaddr, sizeof(struct sockaddr_in));
+    clientaddr.sin_family = AF_INET;
+    clientaddr.sin_port = htons(++usClientPort);
+    clientaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (-1 == bind(socketfd, (struct sockaddr *)&clientaddr, sizeof(struct sockaddr)))
+    {
+        iErron = errno;
+        fprintf(stderr, "bind errno = %d", iErron);
+        close(socketfd);
+        return -1;
+    }
+
+    return socketfd;
+}
+
+STATIC INT LOG_CreateClient(VOID)
+{
+    INT socketfd        = -1;
+    INT iErron          = 0;
+    INT iMsgLen         = 0;
+    socklen_t iAddrLen  = sizeof(struct sockaddr);
+    struct sockaddr_in serveraddr;
+    CHAR *pcMsgBuf  = NULL;
+
+    socketfd = LOG_InitClientFd();
+    if (-1 == socketfd)
+    {
+        return -1;
+    }
+
+    bzero(&serveraddr, sizeof(struct sockaddr_in));
+    serveraddr.sin_family       = AF_INET;
+    serveraddr.sin_port         = htons(LOG_DefaultAddrPort);
+    serveraddr.sin_addr.s_addr  = inet_addr(LOG_DefaultAddrIP);
+        
+    pcMsgBuf = (CHAR *)malloc(LOG_EpollRcvBufSize * sizeof(CHAR));
+    if (NULL == pcMsgBuf)
+    {
+        close(socketfd);
+        return -1;
+    }
+
+    iMsgLen = snprintf(pcMsgBuf, LOG_EpollRcvBufSize, "%d:%d", getpid(), getpid());
+    sendto(socketfd, pcMsgBuf, iMsgLen, 0, (struct sockaddr *)&serveraddr, sizeof(struct sockaddr));
+    pcMsgBuf[0] = '\0';
+    iMsgLen = recvfrom(socketfd, pcMsgBuf, LOG_EpollRcvBufSize, 0, (struct sockaddr *)&serveraddr, &iAddrLen);
+    fprintf(stdout, "pid%d : recv = %s\n", getpid(), pcMsgBuf);
+
+    close(socketfd);
+    return 0;
 }
 
 INT main(IN INT argc, IN CHAR *argv[])
@@ -155,14 +117,13 @@ INT main(IN INT argc, IN CHAR *argv[])
     LOG_Version();
 
 #ifdef LOG_Test
-    LOG_System_s("uname -a");
-    for (;;)
+    for (UINT uiIndex = 0; uiIndex < 5; uiIndex++)
     {
-        sleep(1);
+        LOG_CreateClient();
+        if (0 < fork()) break;
     }
 #endif
-
-    LOG_CreateEpollEvent();
+    
 
     return 0;
 

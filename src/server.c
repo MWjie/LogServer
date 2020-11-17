@@ -98,6 +98,11 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     return 0;
 }
 
+STATIC INT LOG_EpollCallback(VOID)
+{
+    return 0;
+}
+
 STATIC INT LOG_CreateEpollEvent(VOID)
 {
     INT socketfd    = -1;
@@ -186,7 +191,8 @@ STATIC INT LOG_CreateEpollEvent(VOID)
                                     (struct sockaddr *)&ClientAddr, &iAddrLen);
                 if (0 < lRecvLen)
                 {
-
+                    sendto(events[iIndex].data.fd, pcRcvBuf, lRecvLen, 0, (struct sockaddr *)&ClientAddr, iAddrLen);
+                    LOG_EpollCallback();
                 }
             }
         }
@@ -206,7 +212,6 @@ STATIC VOID LOG_Version(VOID)
             atoi(LOG_GIT_DIRTY) > 0,
             sizeof(LONG) == 4 ? 32 : 64,
             LOG_BUILD_ID);
-    exit(0);
 }
 
 INT main(IN INT argc, IN CHAR *argv[])
