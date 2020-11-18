@@ -24,20 +24,18 @@ typedef unsigned long long  UINT64;
 #define INOUT
 #define STATIC              static
 #define BOOL                USHORT
-
-#define VOID               void
-#define STATIC             static
+#define VOID                void
 
 #ifndef FALSE
-#define FALSE              0U
+#define FALSE               0U
 #endif
 
 #ifndef TRUE
-#define TRUE               1U
+#define TRUE                1U
 #endif
 
 #ifndef NULL
-#define NULL               ((VOID *)0)
+#define NULL                ((VOID *)0)
 #endif
 
 
@@ -49,7 +47,15 @@ typedef enum LOG_Level {
     LOG_TRACE
 } LOGLEVEL_E;
 
-
+typedef struct LOG_ShmHeader {
+    CHAR szFileName[64];        /* LOG Shmname and Log file name */
+    UINT uiClientPid;           /* Cilent pid */
+    UINT uiShmSize;             /* Create Shm Size */
+    VOID *pShmStartOffset;      /* Shmaddr + sizeof(LOGShmHeader_S) */
+    VOID *pShmEndOffset;        /* Last one log allow addr */
+    VOID *pShmWriteOffset;      /* Client proess write pointer */
+    VOID *pShmReadOffset;       /* Server proess read pointer */
+} LOGShmHeader_S;
 
 #ifdef __cplusplus
 }

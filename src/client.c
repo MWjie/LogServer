@@ -31,8 +31,8 @@ extern "C" {
 #define LOG_Test
 
 #define LOG_DefaultAddrIP           ( "127.0.0.1" )
-#define LOG_DefaultAddrPort         ( 32001 )
-#define LOG_EpollRcvBufSize         ( 4 * 1024 )
+#define LOG_DefaultAddrPort         ( 32001U )
+#define LOG_MsgBufSize              ( 256U )
 
 
 STATIC VOID LOG_Version(VOID) 
@@ -56,7 +56,7 @@ STATIC INT LOG_InitClientFd(VOID)
     if (-1 == socketfd)
     {
         iErron = errno;
-        fprintf(stderr, "socket errno = %d", iErron);
+        fprintf(stderr, "socket errno = %d\n", iErron);
         return -1;
     }
  
@@ -67,7 +67,7 @@ STATIC INT LOG_InitClientFd(VOID)
     if (-1 == bind(socketfd, (struct sockaddr *)&clientaddr, sizeof(struct sockaddr)))
     {
         iErron = errno;
-        fprintf(stderr, "bind errno = %d", iErron);
+        fprintf(stderr, "bind errno = %d\n", iErron);
         close(socketfd);
         return -1;
     }
@@ -80,9 +80,10 @@ STATIC INT LOG_CreateClient(VOID)
     INT socketfd        = -1;
     INT iErron          = 0;
     INT iMsgLen         = 0;
+    CHAR szSendBuf[LOG_MsgBufSize] = "";
+    CHAR szRecvBuf[LOG_MsgBufSize] = "";
     socklen_t iAddrLen  = sizeof(struct sockaddr);
     struct sockaddr_in serveraddr;
-    CHAR *pcMsgBuf  = NULL;
 
     socketfd = LOG_InitClientFd();
     if (-1 == socketfd)
@@ -94,19 +95,16 @@ STATIC INT LOG_CreateClient(VOID)
     serveraddr.sin_family       = AF_INET;
     serveraddr.sin_port         = htons(LOG_DefaultAddrPort);
     serveraddr.sin_addr.s_addr  = inet_addr(LOG_DefaultAddrIP);
-        
-    pcMsgBuf = (CHAR *)malloc(LOG_EpollRcvBufSize * sizeof(CHAR));
-    if (NULL == pcMsgBuf)
-    {
-        close(socketfd);
-        return -1;
-    }
 
-    iMsgLen = snprintf(pcMsgBuf, LOG_EpollRcvBufSize, "%d:%d", getpid(), getpid());
-    sendto(socketfd, pcMsgBuf, iMsgLen, 0, (struct sockaddr *)&serveraddr, sizeof(struct sockaddr));
-    pcMsgBuf[0] = '\0';
-    iMsgLen = recvfrom(socketfd, pcMsgBuf, LOG_EpollRcvBufSize, 0, (struct sockaddr *)&serveraddr, &iAddrLen);
-    fprintf(stdout, "pid%d : recv = %s\n", getpid(), pcMsgBuf);
+    /* Msg ShmFilename:pid:ShmSize */
+    iMsgLen = snprintf(szSendBuf, LOG_MsgBufSize, "%d:%d:128", getpid(), getpid());
+    sendto(socketfd, szSendBuf, iMsgLen, 0, (struct sockaddr *)&serveraddr, sizeof(struct sockaddr));
+    
+    iMsgLen = recvfrom(socketfd, szRecvBuf, LOG_MsgBufSize, 0, (struct sockaddr *)&serveraddr, &iAddrLen);
+    if (0 != strncmp(szSendBuf, szRecvBuf, strlen(szSendBuf)))
+    {
+        fprintf(stdout, "send = %s : recv = %s\n", szSendBuf, szRecvBuf);
+    }
 
     close(socketfd);
     return 0;

@@ -72,7 +72,7 @@ INT LOG_System_s(IN CHAR *pcCmd)
 }
 
 
-INT LOG_OpenShm(IN CHAR *pcShmName, IN ULONG ulShmSize)
+CHAR *LOG_OpenShm(IN CHAR *pcShmName, IN UINT uiShmSize)
 {
     INT fd = 0;
     CHAR szShmPath[128];
@@ -94,9 +94,9 @@ INT LOG_OpenShm(IN CHAR *pcShmName, IN ULONG ulShmSize)
         }
     }
 
-    ftruncate(fd, ulShmSize);
+    ftruncate(fd, uiShmSize);
 
-    pcShmAddr = (CHAR *)mmap(NULL, ulShmSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    pcShmAddr = (CHAR *)mmap(NULL, uiShmSize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if(NULL == pcShmAddr)
     {
         close(fd);
@@ -108,14 +108,14 @@ INT LOG_OpenShm(IN CHAR *pcShmName, IN ULONG ulShmSize)
 
 }
 
-INT LOG_CloseShm(IN CHAR *pcShmAddr, IN ULONG ulShmSize)
+INT LOG_CloseShm(IN CHAR *pcShmAddr, IN UINT uiShmSize)
 {
-    if(NULL == pcShmAddr || 0 == ulShmSize)
+    if(NULL == pcShmAddr || 0 == uiShmSize)
     {
         return -1;
     }
 
-    if (-1 == munmap(pcShmAddr, ulShmSize))
+    if (-1 == munmap(pcShmAddr, uiShmSize))
     {
         return -1;
     }

@@ -33,10 +33,10 @@ extern "C" {
 #define LOG_LocalSysLogPath         ( "./LocalSysLog" )
 #define LOG_DefualtLogPath          ( "./Log/" )
 #define LOG_DefaultAddrIP           ( "127.0.0.1" )
-#define LOG_DefaultAddrPort         ( 32001 )
+#define LOG_DefaultAddrPort         ( 32001U )
 #define LOG_SysLogSwitch            ( 1 )
-#define LOG_MaxEpollNum             ( 8 )
-#define LOG_EpollRcvBufSize         ( 4 * 1024 )
+#define LOG_MaxEpollNum             ( 8U )
+#define LOG_EpollRcvBufSize         ( 256U )
 
 
 LOGServerContext_S *g_pstLogServerContext = NULL;
@@ -98,9 +98,43 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     return 0;
 }
 
-STATIC INT LOG_EpollCallback(VOID)
+VOID *thread_function(VOID *arg);
+VOID *thread_function(VOID *arg)
 {
-    return 0;
+    return (VOID *)0;
+}
+
+STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
+{
+    pthread_t tid;
+    CHAR *pcShmAddr = NULL;
+    CHAR *pcShmName = NULL;
+    CHAR *pcShmPid  = NULL;
+    CHAR *pcStrTmp  = NULL;
+    CHAR szRecBuf[LOG_EpollRcvBufSize];
+
+    strncpy(szRecBuf, pcRcvBuf, sizeof(szRecBuf));
+    pcShmName = strtok_r(szRecBuf, ":", &pcStrTmp);
+    pcShmPid  = strtok_r(NULL, ":", &pcStrTmp);
+    if (NULL == pcShmName || NULL == pcShmPid || NULL == pcStrTmp)
+    {
+        return NULL;
+    }
+    
+    pcShmAddr = LOG_OpenShm(pcShmName, atoi(pcStrTmp));
+    if (NULL == pcShmAddr)
+    {
+        return NULL;
+    }
+
+    int result;
+    result = pthread_create(&tid, NULL, thread_function, (VOID *)&pcShmAddr);
+    if(result != 0)
+    {
+
+    }
+
+    return pcShmAddr;
 }
 
 STATIC INT LOG_CreateEpollEvent(VOID)
@@ -191,8 +225,16 @@ STATIC INT LOG_CreateEpollEvent(VOID)
                                     (struct sockaddr *)&ClientAddr, &iAddrLen);
                 if (0 < lRecvLen)
                 {
-                    sendto(events[iIndex].data.fd, pcRcvBuf, lRecvLen, 0, (struct sockaddr *)&ClientAddr, iAddrLen);
-                    LOG_EpollCallback();
+                    if (NULL != LOG_EpollCallback(pcRcvBuf))
+                    {
+                        sendto(events[iIndex].data.fd, pcRcvBuf, lRecvLen, 0, 
+                                (struct sockaddr *)&ClientAddr, iAddrLen); /* success echo */
+                    }
+                    else
+                    {
+                        sendto(events[iIndex].data.fd, "Error!", strlen("Error!") + 1, 
+                                0, (struct sockaddr *)&ClientAddr, iAddrLen); /* error */
+                    }
                 }
             }
         }
