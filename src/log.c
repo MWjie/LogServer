@@ -1,6 +1,8 @@
 #ifdef __cplusplus
+#if __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -203,6 +205,8 @@ VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[])
 
 
 #ifdef __cplusplus
+#if __cplusplus
 }
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
 

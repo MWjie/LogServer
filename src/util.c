@@ -1,6 +1,8 @@
 #ifdef __cplusplus
+#if __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -168,8 +170,10 @@ INT LOG_CheckAddrPort(IN CHAR *pcAddrPort)
 }
 
 
-
 #ifdef __cplusplus
+#if __cplusplus
 }
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
+
 

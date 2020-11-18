@@ -2,8 +2,10 @@
 #define LOG_H
 
 #ifdef __cplusplus
+#if __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
 
 #include "api.h"
 
@@ -12,6 +14,16 @@ typedef struct LOG_LocalSyslog {
     INT fd;                                 /* File descriptor */
     pthread_mutex_t mutex;                  /* Mutex */
 } LOGLocalSyslog_S;
+
+typedef struct LOG_ShmList {
+    LOGShmHeader_S stShmHeader;             /* File descriptor */
+    struct LOG_ShmList *pstNext;                  /* Mutex */
+} LOGShmList_S;
+
+typedef struct LOG_ShmListHeader {
+    UINT uiNum;             /* File descriptor */
+    LOGShmList_S *pstNext;                  /* Mutex */
+} LOGShmListHeader_S;
 
 typedef struct LOG_ServerContext {
     /* General */
@@ -40,8 +52,11 @@ extern VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[]);
 
 
 #ifdef __cplusplus
+#if __cplusplus
 }
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
+
 
 #endif //LOG_H
 

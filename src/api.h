@@ -2,8 +2,10 @@
 #define API_H
 
 #ifdef __cplusplus
+#if __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
 
 
 /* type definitions */
@@ -51,15 +53,18 @@ typedef struct LOG_ShmHeader {
     CHAR szFileName[64];        /* LOG Shmname and Log file name */
     UINT uiClientPid;           /* Cilent pid */
     UINT uiShmSize;             /* Create Shm Size */
-    VOID *pShmStartOffset;      /* Shmaddr + sizeof(LOGShmHeader_S) */
-    VOID *pShmEndOffset;        /* Last one log allow addr */
-    VOID *pShmWriteOffset;      /* Client proess write pointer */
-    VOID *pShmReadOffset;       /* Server proess read pointer */
+    CHAR *pShmStartOffset;      /* Shmaddr + sizeof(LOGShmHeader_S) */
+    CHAR *pShmEndOffset;        /* Last one log allow addr */
+    CHAR *pShmWriteOffset;      /* Client proess write pointer */
+    CHAR *pShmReadOffset;       /* Server proess read pointer */
 } LOGShmHeader_S;
 
 #ifdef __cplusplus
+#if __cplusplus
 }
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
+
 
 #endif //API_H
 

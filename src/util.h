@@ -2,8 +2,10 @@
 #define UTIL_H
 
 #ifdef __cplusplus
+#if __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
 
 #include "api.h"
 
@@ -15,8 +17,11 @@ extern INT LOG_CheckAddrPort(IN CHAR *pcAddrPort);
 
 
 #ifdef __cplusplus
+#if __cplusplus
 }
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
+
 
 #endif //UTIL_H
 

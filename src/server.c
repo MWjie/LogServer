@@ -1,6 +1,8 @@
 #ifdef __cplusplus
+#if __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
+#endif /* __cplusplus */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,6 +39,10 @@ extern "C" {
 #define LOG_SysLogSwitch            ( 1 )
 #define LOG_MaxEpollNum             ( 8U )
 #define LOG_EpollRcvBufSize         ( 256U )
+#define LOG_ShmReserveMemery        ( 512U )
+
+
+//#define LOG_BIT_ROUNDUP(x, n)       ((x + (n - 1)) & (~(n - 1)))
 
 
 LOGServerContext_S *g_pstLogServerContext = NULL;
@@ -98,7 +104,6 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     return 0;
 }
 
-VOID *thread_function(VOID *arg);
 VOID *thread_function(VOID *arg)
 {
     return (VOID *)0;
@@ -107,11 +112,14 @@ VOID *thread_function(VOID *arg)
 STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
 {
     pthread_t tid;
+    UINT uiShmSize  = 0;
+    UINT uiShmPid   = 0;
     CHAR *pcShmAddr = NULL;
     CHAR *pcShmName = NULL;
     CHAR *pcShmPid  = NULL;
     CHAR *pcStrTmp  = NULL;
     CHAR szRecBuf[LOG_EpollRcvBufSize];
+    LOGShmHeader_S *pstShmHeader = NULL;
 
     strncpy(szRecBuf, pcRcvBuf, sizeof(szRecBuf));
     pcShmName = strtok_r(szRecBuf, ":", &pcStrTmp);
@@ -120,12 +128,27 @@ STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
     {
         return NULL;
     }
-    
-    pcShmAddr = LOG_OpenShm(pcShmName, atoi(pcStrTmp));
+
+    uiShmSize = atoi(pcStrTmp);
+    uiShmPid  = atoi(pcShmPid);
+
+
+    pcShmAddr = LOG_OpenShm(pcShmName, uiShmSize);
     if (NULL == pcShmAddr)
     {
         return NULL;
     }
+
+    pstShmHeader = (LOGShmHeader_S *)pcShmAddr;
+    pstShmHeader->uiClientPid       = uiShmPid;
+    pstShmHeader->uiShmSize         = uiShmSize;
+    pstShmHeader->pShmStartOffset   = pcShmAddr + sizeof(LOGShmHeader_S);
+    pstShmHeader->pShmEndOffset     = pcShmAddr + uiShmSize - LOG_ShmReserveMemery;
+//    pstShmHeader->pShmStartOffset   = LOG_BIT_ROUNDUP(pcShmAddr + sizeof(LOGShmHeader_S), 8);
+//    pstShmHeader->pShmEndOffset     = LOG_BIT_ROUNDUP(pcShmAddr + uiShmSize - LOG_ShmReserveMemery, 8);
+    pstShmHeader->pShmWriteOffset   = pstShmHeader->pShmStartOffset;
+    pstShmHeader->pShmReadOffset    = pstShmHeader->pShmStartOffset;
+    strncpy(pstShmHeader->szFileName, pcShmName, sizeof(pstShmHeader->szFileName));
 
     int result;
     result = pthread_create(&tid, NULL, thread_function, (VOID *)&pcShmAddr);
@@ -279,9 +302,9 @@ INT main(IN INT argc, IN CHAR *argv[])
 
 }
 
-
 #ifdef __cplusplus
+#if __cplusplus
 }
-#endif
-
+#endif /* __cplusplus */
+#endif /* __cplusplus */
 
