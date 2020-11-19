@@ -16,13 +16,13 @@ typedef struct LOG_LocalSyslog {
 } LOGLocalSyslog_S;
 
 typedef struct LOG_ShmList {
-    LOGShmHeader_S stShmHeader;             /* File descriptor */
-    struct LOG_ShmList *pstNext;                  /* Mutex */
+    LOGShmHeader_S *pstShmHeader;           /* Shm Header pointer */
+    struct LOG_ShmList *pstNext;            /* pNext */
 } LOGShmList_S;
 
 typedef struct LOG_ShmListHeader {
-    UINT uiNum;             /* File descriptor */
-    LOGShmList_S *pstNext;                  /* Mutex */
+    UINT uiNum;                             /* Shm zoo num */
+    LOGShmList_S *pstHeader;                /* Shm List */
 } LOGShmListHeader_S;
 
 typedef struct LOG_ServerContext {
@@ -35,6 +35,7 @@ typedef struct LOG_ServerContext {
     USHORT usLogAddrPort;                   /* Log Server IP Port */
     BOOL bIsLocalSyslog;                    /* Local Syslog flag */
     LOGLocalSyslog_S stLOGLocalSyslog;      /* Local Syslog */
+    LOGShmListHeader_S stShmListHeader;     /* Shm List */
 } LOGServerContext_S;
 
 extern LOGServerContext_S *g_pstLogServerContext;
@@ -42,7 +43,7 @@ extern LOGServerContext_S *g_pstLogServerContext;
 
 extern INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc, IN INT uiLine, IN CHAR *fmt, ...);
 extern VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[]);
-
+extern VOID *LOG_WirteThread(VOID *arg);
 
 #define LOG_RawSysLog(fmt, ...) \
     do \

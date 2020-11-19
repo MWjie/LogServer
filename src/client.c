@@ -99,9 +99,10 @@ STATIC INT LOG_CreateClient(VOID)
     serveraddr.sin_addr.s_addr  = inet_addr(LOG_DefaultAddrIP);
 
     /* Msg ShmFilename:pid:ShmSize */
-    iMsgLen = snprintf(szSendBuf, LOG_MsgBufSize, "%d:%d:128", getpid(), getpid());
+    iMsgLen = snprintf(szSendBuf, LOG_MsgBufSize, "%d:%d:65536", getpid(), getpid());
     sendto(socketfd, szSendBuf, iMsgLen, 0, (struct sockaddr *)&serveraddr, sizeof(struct sockaddr));
-    
+    fprintf(stdout, "send = %s\n", szSendBuf);
+
     iMsgLen = recvfrom(socketfd, szRecvBuf, LOG_MsgBufSize, 0, (struct sockaddr *)&serveraddr, &iAddrLen);
     if (0 != strncmp(szSendBuf, szRecvBuf, strlen(szSendBuf)))
     {
@@ -120,7 +121,7 @@ INT main(IN INT argc, IN CHAR *argv[])
     for (UINT uiIndex = 0; uiIndex < 5; uiIndex++)
     {
         LOG_CreateClient();
-        if (0 < fork()) break;
+//        if (0 < fork()) break;
     }
 #endif
     

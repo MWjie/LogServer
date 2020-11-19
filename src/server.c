@@ -36,13 +36,13 @@ extern "C" {
 #define LOG_DefualtLogPath          ( "./Log/" )
 #define LOG_DefaultAddrIP           ( "127.0.0.1" )
 #define LOG_DefaultAddrPort         ( 32001U )
-#define LOG_SysLogSwitch            ( 1 )
+#define LOG_SysLogSwitch            ( 0 )
 #define LOG_MaxEpollNum             ( 8U )
 #define LOG_EpollRcvBufSize         ( 256U )
 #define LOG_ShmReserveMemery        ( 512U )
 
 
-//#define LOG_BIT_ROUNDUP(x, n)       ((x + (n - 1)) & (~(n - 1)))
+#define LOG_BIT_ROUNDUP(x, n)       ((x + (n - 1)) & (~(n - 1)))
 
 
 LOGServerContext_S *g_pstLogServerContext = NULL;
@@ -67,6 +67,8 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     srand(time(NULL) ^ getpid());
 
     g_pstLogServerContext->pid = getpid();
+    g_pstLogServerContext->stShmListHeader.uiNum     = 0;
+    g_pstLogServerContext->stShmListHeader.pstHeader = NULL;
 
     g_pstLogServerContext->bIsLocalSyslog = LOG_SysLogSwitch;
     pthread_mutex_init(&g_pstLogServerContext->stLOGLocalSyslog.mutex, NULL);
@@ -104,10 +106,26 @@ STATIC INT LOG_InitContext(IN INT argc, IN CHAR *argv[])
     return 0;
 }
 
-VOID *thread_function(VOID *arg)
+
+
+INT LOG_CheckShmConfig(IN CHAR *pcShmName, IN UINT uiShmPid)
 {
-    return (VOID *)0;
+    LOGShmListHeader_S *pstShmListHeader = &g_pstLogServerContext->stShmListHeader;
+    LOGShmList_S *pstShmListNode = pstShmListHeader->pstHeader;
+
+    for (; pstShmListNode != NULL; pstShmListNode = pstShmListNode->pstNext)
+    {
+        if (uiShmPid == pstShmListNode->pstShmHeader->uiClientPid && 
+            0 == strcmp(pstShmListNode->pstShmHeader->szFileName, pcShmName))
+        {
+            LOG_RawSysLog("ShmName amd ShmPid exist\n");
+            return -1;
+        }
+    }
+
+    return 0;
 }
+
 
 STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
 {
@@ -119,27 +137,42 @@ STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
     CHAR *pcShmPid  = NULL;
     CHAR *pcStrTmp  = NULL;
     CHAR szRecBuf[LOG_EpollRcvBufSize];
+    LOGShmList_S *pstShmListTemp = g_pstLogServerContext->stShmListHeader.pstHeader;
+    LOGShmList_S *pstShmListNode = (LOGShmList_S *)malloc(sizeof(LOGShmList_S));
     LOGShmHeader_S *pstShmHeader = NULL;
 
     strncpy(szRecBuf, pcRcvBuf, sizeof(szRecBuf));
-    pcShmName = strtok_r(szRecBuf, ":", &pcStrTmp);
-    pcShmPid  = strtok_r(NULL, ":", &pcStrTmp);
+    pcShmName = strtok_r(szRecBuf, ":", &pcStrTmp) & 0x7FFFFFFFFFFF; //这个strtok_r的返回值不清楚会把高位给至1，这里& 0x7FFFFFFFFFFF强制还原
+    pcShmPid  = strtok_r(NULL, ":", &pcStrTmp) & 0x7FFFFFFFFFFF;     //这个strtok_r的返回值不清楚会把高位给至1，这里& 0x7FFFFFFFFFFF强制还原
     if (NULL == pcShmName || NULL == pcShmPid || NULL == pcStrTmp)
     {
+        LOG_RawSysLog("strtok error\n");
+        free(pstShmListNode);
+        pstShmListNode = NULL;
         return NULL;
     }
 
     uiShmSize = atoi(pcStrTmp);
     uiShmPid  = atoi(pcShmPid);
-
+    if (0 != LOG_CheckShmConfig(pcShmName, uiShmPid))
+    {
+        free(pstShmListNode);
+        pstShmListNode = NULL;
+        return NULL;
+    }
 
     pcShmAddr = LOG_OpenShm(pcShmName, uiShmSize);
     if (NULL == pcShmAddr)
     {
+        LOG_RawSysLog("Shm open error\n");
+        free(pstShmListNode);
+        pstShmListNode = NULL;
         return NULL;
     }
-
+LOG_RawSysLog("4\n");
     pstShmHeader = (LOGShmHeader_S *)pcShmAddr;
+    *pcShmAddr = 1;
+LOG_RawSysLog("pcShmAddr = %d\n", *pcShmAddr);
     pstShmHeader->uiClientPid       = uiShmPid;
     pstShmHeader->uiShmSize         = uiShmSize;
     pstShmHeader->pShmStartOffset   = pcShmAddr + sizeof(LOGShmHeader_S);
@@ -149,16 +182,22 @@ STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
     pstShmHeader->pShmWriteOffset   = pstShmHeader->pShmStartOffset;
     pstShmHeader->pShmReadOffset    = pstShmHeader->pShmStartOffset;
     strncpy(pstShmHeader->szFileName, pcShmName, sizeof(pstShmHeader->szFileName));
-
+LOG_RawSysLog("5\n");
+    pstShmListNode->pstShmHeader    = pstShmHeader;
+    g_pstLogServerContext->stShmListHeader.uiNum++;
+    g_pstLogServerContext->stShmListHeader.pstHeader = pstShmListNode;
+    pstShmListNode->pstNext = pstShmListTemp;
+LOG_RawSysLog("6\n");
     int result;
-    result = pthread_create(&tid, NULL, thread_function, (VOID *)&pcShmAddr);
+    result = pthread_create(&tid, NULL, LOG_WirteThread, (VOID *)&pcShmAddr);
     if(result != 0)
     {
 
     }
-
+LOG_RawSysLog("7\n");
     return pcShmAddr;
 }
+
 
 STATIC INT LOG_CreateEpollEvent(VOID)
 {
@@ -246,15 +285,18 @@ STATIC INT LOG_CreateEpollEvent(VOID)
             {
                 lRecvLen = recvfrom(events[iIndex].data.fd, pcRcvBuf, LOG_EpollRcvBufSize, 0,
                                     (struct sockaddr *)&ClientAddr, &iAddrLen);
+                LOG_RawSysLog("recv = %s\n", pcRcvBuf);
                 if (0 < lRecvLen)
                 {
                     if (NULL != LOG_EpollCallback(pcRcvBuf))
                     {
+                        LOG_RawSysLog("LOG_EpollCallback success\n");
                         sendto(events[iIndex].data.fd, pcRcvBuf, lRecvLen, 0, 
                                 (struct sockaddr *)&ClientAddr, iAddrLen); /* success echo */
                     }
                     else
                     {
+                        LOG_RawSysLog("LOG_EpollCallback error\n");
                         sendto(events[iIndex].data.fd, "Error!", strlen("Error!") + 1, 
                                 0, (struct sockaddr *)&ClientAddr, iAddrLen); /* error */
                     }
@@ -269,6 +311,7 @@ STATIC INT LOG_CreateEpollEvent(VOID)
     return 0;
 }
 
+
 STATIC VOID LOG_Version(VOID) 
 {
     printf("LOG server v=%s sha=%s:%d bits=%d build=%s\n",
@@ -278,6 +321,7 @@ STATIC VOID LOG_Version(VOID)
             sizeof(LONG) == 4 ? 32 : 64,
             LOG_BUILD_ID);
 }
+
 
 INT main(IN INT argc, IN CHAR *argv[])
 {

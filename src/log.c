@@ -63,6 +63,12 @@ INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc, IN INT
     return 0;
 }
 
+VOID *LOG_WirteThread(VOID *arg)
+{
+    LOG_RawSysLog("Thread Create success\n");
+    return (VOID *)0;
+}
+
 
 STATIC VOID LOG_CmdSetAddr(IN CHAR *pcArgvContent)
 {
