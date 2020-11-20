@@ -53,6 +53,7 @@ typedef struct LOG_ShmHeader {
     CHAR szFileName[64];        /* LOG Shmname and Log file name */
     UINT uiClientPid;           /* Cilent pid */
     UINT uiShmSize;             /* Create Shm Size */
+    CHAR *pShmAddr;             /* Shmaddr*/
     CHAR *pShmStartOffset;      /* Shmaddr + sizeof(LOGShmHeader_S) */
     CHAR *pShmEndOffset;        /* Last one log allow addr */
     CHAR *pShmWriteOffset;      /* Client proess write pointer */

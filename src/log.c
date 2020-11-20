@@ -65,7 +65,10 @@ INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc, IN INT
 
 VOID *LOG_WirteThread(VOID *arg)
 {
-    LOG_RawSysLog("Thread Create success\n");
+    pthread_detach(pthread_self());
+    LOG_RawSysLog("Thread Create success, %p:%s\n", (CHAR *)arg, (CHAR *)arg);
+
+
     return (VOID *)0;
 }
 

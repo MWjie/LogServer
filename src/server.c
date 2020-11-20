@@ -27,6 +27,7 @@ extern "C" {
 #include <pthread.h>
 
 #include "log.h"
+#include "util.h"
 #include "release.h"
 
 
@@ -130,6 +131,7 @@ INT LOG_CheckShmConfig(IN CHAR *pcShmName, IN UINT uiShmPid)
 STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
 {
     pthread_t tid;
+    INT iResult     = 0;
     UINT uiShmSize  = 0;
     UINT uiShmPid   = 0;
     CHAR *pcShmAddr = NULL;
@@ -137,14 +139,10 @@ STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
     CHAR *pcShmPid  = NULL;
     CHAR *pcStrTmp  = NULL;
     CHAR szRecBuf[LOG_EpollRcvBufSize];
-    LOGShmList_S *pstShmListTemp = g_pstLogServerContext->stShmListHeader.pstHeader;
-    LOGShmList_S *pstShmListNode = (LOGShmList_S *)malloc(sizeof(LOGShmList_S));
     LOGShmHeader_S *pstShmHeader = NULL;
+    LOGShmList_S *pstShmListNode = (LOGShmList_S *)malloc(sizeof(LOGShmList_S));
 
     strncpy(szRecBuf, pcRcvBuf, sizeof(szRecBuf));
- /* 这段代码理论是没有问题的，但是会出现这样一个问题：
-    strtok_r的返回值地址跟输入值地址不同，比如说输入值地址为0x7fff123456，
-    但返回值可能为0xffffffffffffff123456 或者 0x123456 导致地址越界 */
     pcShmName = LOG_Strtok_r(szRecBuf, ":", &pcStrTmp);
     pcShmPid  = LOG_Strtok_r(NULL, ":", &pcStrTmp);
     if (NULL == pcShmName || NULL == pcShmPid || NULL == pcStrTmp)
@@ -154,7 +152,7 @@ STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
         pstShmListNode = NULL;
         return NULL;
     }
-LOG_RawSysLog("pcShmName = %p, pcShmPid = %p, pcStrTmp = %p, \n", pcShmName, pcShmPid, pcStrTmp);
+
     uiShmSize = atoi(pcStrTmp);
     uiShmPid  = atoi(pcShmPid);
     if (0 != LOG_CheckShmConfig(pcShmName, uiShmPid))
@@ -172,32 +170,32 @@ LOG_RawSysLog("pcShmName = %p, pcShmPid = %p, pcStrTmp = %p, \n", pcShmName, pcS
         pstShmListNode = NULL;
         return NULL;
     }
-LOG_RawSysLog("4\n");
+    LOG_RawSysLog("/dev/shm/%s size:%u open\n", pcShmName, uiShmSize);
+
     pstShmHeader = (LOGShmHeader_S *)pcShmAddr;
-    strcpy(pcShmAddr, "testShm\n");
-LOG_RawSysLog("pcShmAddr = %s\n", pcShmAddr);
+    strncpy(pstShmHeader->szFileName, pcShmName, sizeof(pstShmHeader->szFileName));
     pstShmHeader->uiClientPid       = uiShmPid;
     pstShmHeader->uiShmSize         = uiShmSize;
+    pstShmHeader->pShmAddr          = pcShmAddr;
     pstShmHeader->pShmStartOffset   = pcShmAddr + sizeof(LOGShmHeader_S);
     pstShmHeader->pShmEndOffset     = pcShmAddr + uiShmSize - LOG_ShmReserveMemery;
-//    pstShmHeader->pShmStartOffset   = LOG_BIT_ROUNDUP(pcShmAddr + sizeof(LOGShmHeader_S), 8);
-//    pstShmHeader->pShmEndOffset     = LOG_BIT_ROUNDUP(pcShmAddr + uiShmSize - LOG_ShmReserveMemery, 8);
     pstShmHeader->pShmWriteOffset   = pstShmHeader->pShmStartOffset;
     pstShmHeader->pShmReadOffset    = pstShmHeader->pShmStartOffset;
-    strncpy(pstShmHeader->szFileName, pcShmName, sizeof(pstShmHeader->szFileName));
-LOG_RawSysLog("5\n");
+
     pstShmListNode->pstShmHeader    = pstShmHeader;
+    pstShmListNode->pstNext         = g_pstLogServerContext->stShmListHeader.pstHeader;
     g_pstLogServerContext->stShmListHeader.uiNum++;
     g_pstLogServerContext->stShmListHeader.pstHeader = pstShmListNode;
-    pstShmListNode->pstNext = pstShmListTemp;
-LOG_RawSysLog("6\n");
-    int result;
-    result = pthread_create(&tid, NULL, LOG_WirteThread, (VOID *)&pcShmAddr);
-    if(result != 0)
+    
+    if (pthread_create(&tid, NULL, LOG_WirteThread, (VOID *)pcShmAddr) != 0)
     {
-
+        LOG_CloseShm(pcShmAddr, uiShmSize);
+        free(pstShmListNode);
+        pstShmListNode = NULL;
+        LOG_RawSysLog("pthread create error\n");
+        return NULL;
     }
-LOG_RawSysLog("7\n");
+
     return pcShmAddr;
 }
 
@@ -326,6 +324,23 @@ STATIC VOID LOG_Version(VOID)
 }
 
 
+STATIC VOID LOG_STOP(INT signo) 
+{
+    LOGShmList_S *pstListNode = g_pstLogServerContext->stShmListHeader.pstHeader;
+
+    for (; pstListNode != NULL; pstListNode = pstListNode->pstNext)
+    {
+        LOG_CloseShm(pstListNode->pstShmHeader->pShmAddr, pstListNode->pstShmHeader->uiShmSize);
+        LOG_RawSysLog("/dev/shm/%s addr:%p size:%u closed\n", 
+                        pstListNode->pstShmHeader->szFileName, 
+                        pstListNode->pstShmHeader->pShmAddr,
+                        pstListNode->pstShmHeader->uiShmSize);
+    }
+    LOG_RawSysLog("Signal Ctrl + C, LogServer exit...\n");
+    _exit(0);
+}
+
+
 INT main(IN INT argc, IN CHAR *argv[])
 {
     LOG_Version();
@@ -343,6 +358,7 @@ INT main(IN INT argc, IN CHAR *argv[])
     }
 #endif
 
+    signal(SIGINT, LOG_STOP); 
     LOG_CreateEpollEvent();
 
     return 0;
