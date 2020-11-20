@@ -3,29 +3,21 @@ uname_S 	:= $(shell sh -c 'uname -s 2>/dev/null 		|| echo not')
 uname_M 	:= $(shell sh -c 'uname -m 2>/dev/null 		|| echo not')
 
 # Default settings
-OPTIMIZATION?=-O0
+OPTIMIZATION?=-O2
 
 WARN	= -Wall -W -Wno-missing-field-initializers
 OPT		= $(OPTIMIZATION)
 CC 		= gcc
-DEBUG	= -g -ggdb
+DEBUG	= -g
 
-STD		= -std=c99 -pedantic -DREDIS_STATIC=''
+STD		= -std=c99 -pedantic
 ifneq (,$(findstring clang,$(CC)))
 ifneq (,$(findstring FreeBSD,$(uname_S)))
 	STD+=-Wno-c11-extensions
 endif
 endif
 
-# Default allocator defaults to Jemalloc if it's not an ARM
 MALLOC=libc
-ifneq ($(uname_M),armv6l)
-ifneq ($(uname_M),armv7l)
-ifeq ($(uname_S),Linux)
-	MALLOC=jemalloc
-endif
-endif
-endif
 
 # To get ARM stack traces if Redis crashes we need a special C flag.
 ifneq (,$(filter aarch64 armv,$(uname_M)))
@@ -36,22 +28,6 @@ ifneq (,$(findstring armv,$(uname_M)))
 endif
 endif
 
-# Backwards compatibility for selecting an allocator
-ifeq ($(USE_TCMALLOC),yes)
-	MALLOC=tcmalloc
-endif
-
-ifeq ($(USE_TCMALLOC_MINIMAL),yes)
-	MALLOC=tcmalloc_minimal
-endif
-
-ifeq ($(USE_JEMALLOC),yes)
-	MALLOC=jemalloc
-endif
-
-ifeq ($(USE_JEMALLOC),no)
-	MALLOC=libc
-endif
 
 FINAL_CFLAGS	= $(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS)
 FINAL_LDFLAGS	= $(LDFLAGS) $(REDIS_LDFLAGS) $(DEBUG)

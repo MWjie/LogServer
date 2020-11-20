@@ -142,8 +142,11 @@ STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
     LOGShmHeader_S *pstShmHeader = NULL;
 
     strncpy(szRecBuf, pcRcvBuf, sizeof(szRecBuf));
-    pcShmName = strtok_r(szRecBuf, ":", &pcStrTmp) & 0x7FFFFFFFFFFF; //这个strtok_r的返回值不清楚会把高位给至1，这里& 0x7FFFFFFFFFFF强制还原
-    pcShmPid  = strtok_r(NULL, ":", &pcStrTmp) & 0x7FFFFFFFFFFF;     //这个strtok_r的返回值不清楚会把高位给至1，这里& 0x7FFFFFFFFFFF强制还原
+ /* 这段代码理论是没有问题的，但是会出现这样一个问题：
+    strtok_r的返回值地址跟输入值地址不同，比如说输入值地址为0x7fff123456，
+    但返回值可能为0xffffffffffffff123456 或者 0x123456 导致地址越界 */
+    pcShmName = LOG_Strtok_r(szRecBuf, ":", &pcStrTmp);
+    pcShmPid  = LOG_Strtok_r(NULL, ":", &pcStrTmp);
     if (NULL == pcShmName || NULL == pcShmPid || NULL == pcStrTmp)
     {
         LOG_RawSysLog("strtok error\n");
@@ -151,7 +154,7 @@ STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
         pstShmListNode = NULL;
         return NULL;
     }
-
+LOG_RawSysLog("pcShmName = %p, pcShmPid = %p, pcStrTmp = %p, \n", pcShmName, pcShmPid, pcStrTmp);
     uiShmSize = atoi(pcStrTmp);
     uiShmPid  = atoi(pcShmPid);
     if (0 != LOG_CheckShmConfig(pcShmName, uiShmPid))
@@ -171,8 +174,8 @@ STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
     }
 LOG_RawSysLog("4\n");
     pstShmHeader = (LOGShmHeader_S *)pcShmAddr;
-    *pcShmAddr = 1;
-LOG_RawSysLog("pcShmAddr = %d\n", *pcShmAddr);
+    strcpy(pcShmAddr, "testShm\n");
+LOG_RawSysLog("pcShmAddr = %s\n", pcShmAddr);
     pstShmHeader->uiClientPid       = uiShmPid;
     pstShmHeader->uiShmSize         = uiShmSize;
     pstShmHeader->pShmStartOffset   = pcShmAddr + sizeof(LOGShmHeader_S);
