@@ -43,7 +43,7 @@ extern LOGServerContext_S *g_pstLogServerContext;
 
 extern INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc, IN INT uiLine, IN CHAR *fmt, ...);
 extern VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[]);
-extern VOID *LOG_WirteThread(VOID *arg);
+extern VOID LOG_WirteThread(VOID *arg);
 
 #define LOG_RawSysLog(fmt, ...) \
     do \

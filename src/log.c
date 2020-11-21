@@ -27,7 +27,11 @@ extern "C" {
 #include "log.h"
 #include "util.h"
 
+
 #define LOG_LocalSysLogBufSize      ( 512UL )
+#define LOG_MAXLogFileSize          ( 5 * 1024 *1024 ) /* Signal File Size */
+#define LOG_MAXLogFileNum           ( 5U )             /* File Num */
+
 
 
 INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc, IN INT uiLine, IN CHAR *fmt, ...)
@@ -63,17 +67,70 @@ INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc, IN INT
     return 0;
 }
 
-VOID *LOG_WirteThread(VOID *arg)
+
+/* 日志写入线程，每一个共享内存块对应一个写入线程 */
+VOID LOG_WirteThread(VOID *arg)
 {
+    INT fd;
+    ULONG ulStrLen          = 0;
+    UINT64 ullNeadWriteLen  = 0;
+    CHAR szFilePath[256]    = "";
+    struct timeval stTimeVal;
+    struct tm stLocalTime;
+    struct stat stFileStat;
+    LOGShmHeader_S *pstShmHeader = (LOGShmHeader_S *)arg;
+
     pthread_detach(pthread_self());
-    LOG_RawSysLog("Thread Create success, %p:%s\n", (CHAR *)arg, (CHAR *)arg);
-    while (1)
+    LOG_RawSysLog("Thread Create success, %p:%s\n", (CHAR *)pstShmHeader, (CHAR *)pstShmHeader);
+
+    gettimeofday(&stTimeVal, NULL);
+    localtime_r(&stTimeVal.tv_sec, &stLocalTime);
+    ulStrLen  = snprintf(szFilePath, sizeof(szFilePath), "%s%s_", g_pstLogServerContext->szFilePath, pstShmHeader->szFileName);
+    ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%d_%b_%Y_%H:%M:%S.", &stLocalTime);
+    ulStrLen += snprintf(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%03d", stTimeVal.tv_usec / 1000);
+    fd = open(szFilePath, O_WRONLY | O_CREAT | O_APPEND, 0666);
+
+    for (;;)
     {
-        sleep(1);
-        printf("tid = %u runing..\n", pthread_self());
+        fstat(fd, &stFileStat);
+        if (stFileStat.st_size >= LOG_MAXLogFileSize)
+        {
+            gettimeofday(&stTimeVal, NULL);
+            localtime_r(&stTimeVal.tv_sec, &stLocalTime);
+            ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "-%d_%b_%Y_%H:%M:%S.", &stLocalTime);
+            ulStrLen += snprintf(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%03d-", stTimeVal.tv_usec / 1000);
+            close(fd); /* close old file */
+
+            gettimeofday(&stTimeVal, NULL);
+            localtime_r(&stTimeVal.tv_sec, &stLocalTime);
+            ulStrLen  = snprintf(szFilePath, sizeof(szFilePath), "%s%s_", g_pstLogServerContext->szFilePath, pstShmHeader->szFileName);
+            ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%d_%b_%Y_%H:%M:%S.", &stLocalTime);
+            ulStrLen += snprintf(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%03d-", stTimeVal.tv_usec / 1000);
+            fd = open(szFilePath, O_WRONLY | O_CREAT | O_APPEND, 0666); /* open new file */
+        }
+
+        if (pstShmHeader->pShmWriteOffset > pstShmHeader->pShmReadOffset)
+        {
+            /* 如果读指针小于写指针，将读写指针间内容写入文件 */
+            ullNeadWriteLen = pstShmHeader->pShmWriteOffset - pstShmHeader->pShmReadOffset;
+            write(fd, pstShmHeader->pShmReadOffset, ullNeadWriteLen);
+            pstShmHeader->pShmReadOffset += ullNeadWriteLen;
+        }
+        else if (pstShmHeader->pShmWriteOffset < pstShmHeader->pShmReadOffset)
+        {
+             /* 如果读指针大于写指针，说明发生翻转，将读指针到终止指针的内容写入文件 */
+            ullNeadWriteLen = pstShmHeader->pShmEndOffset - pstShmHeader->pShmReadOffset;
+            write(fd, pstShmHeader->pShmReadOffset, ullNeadWriteLen);
+            pstShmHeader->pShmReadOffset = pstShmHeader->pShmStartOffset;
+        }
+        else /* pstShmHeader->pShmWriteOffset == pstShmHeader->pShmReadOffset */
+        {
+            sleep(1);
+        }
     }
 
-    return (VOID *)0;
+    close(fd);
+    pthread_exit(0);
 }
 
 
@@ -100,6 +157,7 @@ STATIC VOID LOG_CmdSetAddr(IN CHAR *pcArgvContent)
     return;
 }
 
+
 STATIC VOID LOG_CmdSetCPU(IN CHAR *pcArgvContent)
 {
     UINT usTargeCPU;
@@ -120,6 +178,7 @@ STATIC VOID LOG_CmdSetCPU(IN CHAR *pcArgvContent)
 
     return;
 }
+
 
 STATIC VOID LOG_CmdSetPATH(IN CHAR *pcArgvContent)
 {
