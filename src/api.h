@@ -49,16 +49,46 @@ typedef enum LOG_Level {
     LOG_TRACE
 } LOGLEVEL_E;
 
-typedef struct LOG_ShmHeader {
-    CHAR szFileName[64];        /* LOG Shmname and Log file name */
-    UINT uiClientPid;           /* Cilent pid */
-    UINT uiShmSize;             /* Create Shm Size */
-    CHAR *pShmAddr;             /* Shmaddr*/
-    CHAR *pShmStartOffset;      /* Shmaddr + sizeof(LOGShmHeader_S) */
-    CHAR *pShmEndOffset;        /* Last one log allow addr */
-    CHAR *pShmWriteOffset;      /* Client proess write pointer */
-    CHAR *pShmReadOffset;       /* Server proess read pointer */
-} LOGShmHeader_S;
+typedef struct LOG_LevelStr {
+    LOGLEVEL_E enLogLevel;
+    CHAR *pcLevelStr;
+} LOGLEVELSTR_S;
+
+
+extern CHAR *LOG_WriteLog(IN LOGLEVEL_E enLogLevel, IN CHAR *pcFunc, IN INT uiLine, IN CHAR *fmt, ...);
+
+#define LOG_ErrorLog(fmt, ...) \
+    do \
+    { \
+        LOG_WriteLog(LOG_ERROR, __func__, __LINE__, fmt, ##__VA_ARGS__); \
+    } while (0)
+
+#define LOG_WarnLog(fmt, ...) \
+    do \
+    { \
+        LOG_WriteLog(LOG_WARN, __func__, __LINE__, fmt, ##__VA_ARGS__); \
+    } while (0)
+
+#define LOG_InfoLog(fmt, ...) \
+    do \
+    { \
+        LOG_WriteLog(LOG_INFO, __func__, __LINE__, fmt, ##__VA_ARGS__); \
+    } while (0)
+
+#define LOG_DebugLog(fmt, ...) \
+    do \
+    { \
+        LOG_WriteLog(LOG_DEBUG, __func__, __LINE__, fmt, ##__VA_ARGS__); \
+    } while (0)
+
+#define LOG_TraceLog(fmt, ...) \
+    do \
+    { \
+        LOG_WriteLog(LOG_TRACE, __func__, __LINE__, fmt, ##__VA_ARGS__); \
+    } while (0)
+
+
+
 
 #ifdef __cplusplus
 #if __cplusplus

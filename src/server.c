@@ -173,21 +173,22 @@ STATIC CHAR *LOG_EpollCallback(IN CHAR *pcRcvBuf)
     LOG_RawSysLog("/dev/shm/%s size:%u open\n", pcShmName, uiShmSize);
 
     pstShmHeader = (LOGShmHeader_S *)pcShmAddr;
+    memset(pcShmAddr, 0x0, sizeof(LOGShmHeader_S));
     strncpy(pstShmHeader->szFileName, pcShmName, sizeof(pstShmHeader->szFileName));
-    pstShmHeader->uiClientPid       = uiShmPid;
-    pstShmHeader->uiShmSize         = uiShmSize;
-    pstShmHeader->pShmAddr          = pcShmAddr;
-    pstShmHeader->pShmStartOffset   = pcShmAddr + sizeof(LOGShmHeader_S);
-    pstShmHeader->pShmEndOffset     = pcShmAddr + uiShmSize - LOG_ShmReserveMemery;
-    pstShmHeader->pShmWriteOffset   = pstShmHeader->pShmStartOffset;
-    pstShmHeader->pShmReadOffset    = pstShmHeader->pShmStartOffset;
+    pstShmHeader->uiClientPid               = uiShmPid;
+    pstShmHeader->uiShmSize                 = uiShmSize;
+    pstShmHeader->pShmAddr_Server           = pcShmAddr;
+    pstShmHeader->pShmStartOffset_Server    = pcShmAddr + sizeof(LOGShmHeader_S);
+    pstShmHeader->pShmEndOffset_Server      = pcShmAddr + uiShmSize - LOG_ShmReserveMemery;
+    pstShmHeader->pShmWriteOffset_Server    = pstShmHeader->pShmStartOffset_Server;
+    pstShmHeader->pShmReadOffset_Server     = pstShmHeader->pShmStartOffset_Server;
 
     pstShmListNode->pstShmHeader    = pstShmHeader;
     pstShmListNode->pstNext         = g_pstLogServerContext->stShmListHeader.pstHeader;
     g_pstLogServerContext->stShmListHeader.uiNum++;
     g_pstLogServerContext->stShmListHeader.pstHeader = pstShmListNode;
     
-    if (pthread_create(&tid, NULL, LOG_WirteThread, (VOID *)pcShmAddr) != 0)
+    if (pthread_create(&tid, NULL, LOG_ReadThread, (VOID *)pcShmAddr) != 0)
     {
         LOG_CloseShm(pcShmAddr, uiShmSize);
         free(pstShmListNode);
@@ -333,12 +334,12 @@ STATIC VOID LOG_STOP(INT signo)
     {
         LOG_RawSysLog("/dev/shm/%s addr:%p size:%u closed\n", 
                         pstListNode->pstShmHeader->szFileName, 
-                        pstListNode->pstShmHeader->pShmAddr,
+                        pstListNode->pstShmHeader->pShmAddr_Server,
                         pstListNode->pstShmHeader->uiShmSize);
 
         szFilePath[0] = "\0";
         snprintf(szFilePath, sizeof(szFilePath), "rm -f /dev/shm/%s", pstListNode->pstShmHeader->szFileName);
-        LOG_CloseShm(pstListNode->pstShmHeader->pShmAddr, pstListNode->pstShmHeader->uiShmSize);
+        LOG_CloseShm(pstListNode->pstShmHeader->pShmAddr_Server, pstListNode->pstShmHeader->uiShmSize);
         LOG_System_s(szFilePath);
     }
 

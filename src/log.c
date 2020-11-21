@@ -69,10 +69,10 @@ INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc, IN INT
 
 
 /* 日志写入线程，每一个共享内存块对应一个写入线程 */
-VOID LOG_WirteThread(VOID *arg)
+VOID LOG_ReadThread(VOID *arg)
 {
     INT fd;
-    ULONG ulStrLen          = 0;
+    ULONG ulStrLen  = 0;
     UINT64 ullNeadWriteLen  = 0;
     CHAR szFilePath[256]    = "";
     struct timeval stTimeVal;
@@ -81,7 +81,7 @@ VOID LOG_WirteThread(VOID *arg)
     LOGShmHeader_S *pstShmHeader = (LOGShmHeader_S *)arg;
 
     pthread_detach(pthread_self());
-    LOG_RawSysLog("Thread Create success, %p:%s\n", (CHAR *)pstShmHeader, (CHAR *)pstShmHeader);
+    LOG_RawSysLog("Thread:%u Create success, %p:%s\n", pthread_self(), (CHAR *)pstShmHeader, (CHAR *)pstShmHeader);
 
     gettimeofday(&stTimeVal, NULL);
     localtime_r(&stTimeVal.tv_sec, &stLocalTime);
@@ -98,30 +98,34 @@ VOID LOG_WirteThread(VOID *arg)
             gettimeofday(&stTimeVal, NULL);
             localtime_r(&stTimeVal.tv_sec, &stLocalTime);
             ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "-%d_%b_%Y_%H:%M:%S.", &stLocalTime);
-            ulStrLen += snprintf(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%03d-", stTimeVal.tv_usec / 1000);
+            ulStrLen += snprintf(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%03d", stTimeVal.tv_usec / 1000);
             close(fd); /* close old file */
 
             gettimeofday(&stTimeVal, NULL);
             localtime_r(&stTimeVal.tv_sec, &stLocalTime);
             ulStrLen  = snprintf(szFilePath, sizeof(szFilePath), "%s%s_", g_pstLogServerContext->szFilePath, pstShmHeader->szFileName);
             ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%d_%b_%Y_%H:%M:%S.", &stLocalTime);
-            ulStrLen += snprintf(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%03d-", stTimeVal.tv_usec / 1000);
+            ulStrLen += snprintf(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%03d", stTimeVal.tv_usec / 1000);
             fd = open(szFilePath, O_WRONLY | O_CREAT | O_APPEND, 0666); /* open new file */
         }
 
-        if (pstShmHeader->pShmWriteOffset > pstShmHeader->pShmReadOffset)
+        if (pstShmHeader->pShmWriteOffset_Server > pstShmHeader->pShmReadOffset_Server)
         {
             /* 如果读指针小于写指针，将读写指针间内容写入文件 */
-            ullNeadWriteLen = pstShmHeader->pShmWriteOffset - pstShmHeader->pShmReadOffset;
-            write(fd, pstShmHeader->pShmReadOffset, ullNeadWriteLen);
-            pstShmHeader->pShmReadOffset += ullNeadWriteLen;
+            ullNeadWriteLen = pstShmHeader->pShmWriteOffset_Server - pstShmHeader->pShmReadOffset_Server;
+            write(fd, pstShmHeader->pShmReadOffset_Server, ullNeadWriteLen);
+            pstShmHeader->pShmReadOffset_Server = ((pstShmHeader->pShmReadOffset_Server + ullNeadWriteLen) >= pstShmHeader->pShmEndOffset_Server) ?
+                                            pstShmHeader->pShmStartOffset_Server : (pstShmHeader->pShmReadOffset_Server + ullNeadWriteLen);
+            pstShmHeader->pShmReadOffset_Client = ((pstShmHeader->pShmReadOffset_Client + ullNeadWriteLen) >= pstShmHeader->pShmEndOffset_Client) ?
+                                            pstShmHeader->pShmStartOffset_Client : (pstShmHeader->pShmReadOffset_Client + ullNeadWriteLen);
         }
-        else if (pstShmHeader->pShmWriteOffset < pstShmHeader->pShmReadOffset)
+        else if (pstShmHeader->pShmWriteOffset_Server < pstShmHeader->pShmReadOffset_Server)
         {
-             /* 如果读指针大于写指针，说明发生翻转，将读指针到终止指针的内容写入文件 */
-            ullNeadWriteLen = pstShmHeader->pShmEndOffset - pstShmHeader->pShmReadOffset;
-            write(fd, pstShmHeader->pShmReadOffset, ullNeadWriteLen);
-            pstShmHeader->pShmReadOffset = pstShmHeader->pShmStartOffset;
+            /* 如果读指针大于写指针，说明发生翻转，将读指针到终止指针的内容写入文件 */
+            ullNeadWriteLen = pstShmHeader->pShmEndOffset_Server - pstShmHeader->pShmReadOffset_Server;
+            write(fd, pstShmHeader->pShmReadOffset_Server, ullNeadWriteLen);
+            pstShmHeader->pShmReadOffset_Server = pstShmHeader->pShmStartOffset_Server;
+            pstShmHeader->pShmReadOffset_Client = pstShmHeader->pShmStartOffset_Client;
         }
         else /* pstShmHeader->pShmWriteOffset == pstShmHeader->pShmReadOffset */
         {

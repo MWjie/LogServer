@@ -15,6 +15,24 @@ typedef struct LOG_LocalSyslog {
     pthread_mutex_t mutex;                  /* Mutex */
 } LOGLocalSyslog_S;
 
+typedef struct LOG_ShmHeader {
+    CHAR szFileName[64];                    /* LOG Shmname and Log file name */
+    UINT uiClientPid;                       /* Cilent pid */
+    UINT uiShmSize;                         /* Create Shm Size */
+    /* 服务端地址 */
+    CHAR *pShmAddr_Server;                  /* Shmaddr*/
+    CHAR *pShmStartOffset_Server;           /* Shmaddr + sizeof(LOGShmHeader_S) */
+    CHAR *pShmEndOffset_Server;             /* Last one log allow addr */
+    CHAR *pShmWriteOffset_Server;           /* Client proess write pointer */
+    CHAR *pShmReadOffset_Server;            /* Server proess read pointer */
+    /* 客户端地址 */
+    CHAR *pShmAddr_Client;                   /* Shmaddr*/
+    CHAR *pShmStartOffset_Client;            /* Shmaddr + sizeof(LOGShmHeader_S) */
+    CHAR *pShmEndOffset_Client;              /* Last one log allow addr */
+    CHAR *pShmWriteOffset_Client;            /* Client proess write pointer */
+    CHAR *pShmReadOffset_Client;             /* Server proess read pointer */
+} LOGShmHeader_S;
+
 typedef struct LOG_ShmList {
     LOGShmHeader_S *pstShmHeader;           /* Shm Header pointer */
     struct LOG_ShmList *pstNext;            /* pNext */
@@ -24,6 +42,7 @@ typedef struct LOG_ShmListHeader {
     UINT uiNum;                             /* Shm zoo num */
     LOGShmList_S *pstHeader;                /* Shm List */
 } LOGShmListHeader_S;
+
 
 typedef struct LOG_ServerContext {
     /* General */
@@ -43,7 +62,7 @@ extern LOGServerContext_S *g_pstLogServerContext;
 
 extern INT LOG_LocalSyslog(IN LOGLocalSyslog_S *pstLocalSyslog, IN CHAR *pcFunc, IN INT uiLine, IN CHAR *fmt, ...);
 extern VOID LOG_ParsePara(IN INT argc, IN CHAR *argv[]);
-extern VOID LOG_WirteThread(VOID *arg);
+extern VOID LOG_ReadThread(VOID *arg);
 
 #define LOG_RawSysLog(fmt, ...) \
     do \

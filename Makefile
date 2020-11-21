@@ -107,7 +107,7 @@ LOG_INSTALL		= $(QUIET_INSTALL)$(INSTALL)
 LOG_SERVER_NAME	= $(DIR_BIN)/LogServer
 LOG_CLI_NAME	= $(DIR_BIN)/LogClient
 LOG_SERVER_OBJ	= $(DIR_OBJ)/log.o $(DIR_OBJ)/util.o $(DIR_OBJ)/server.o
-LOG_CLI_OBJ		= $(DIR_OBJ)/client.o
+LOG_CLI_OBJ		= $(DIR_OBJ)/client.o $(DIR_OBJ)/util.o 
 OBJ_TARGET 		= $(patsubst %.c,$(DIR_OBJ)/%.o,$(notdir $(wildcard ${DIR_SRC}/*.c)))
 
 all: $(LOG_SERVER_NAME) $(LOG_CLI_NAME)
