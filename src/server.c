@@ -326,16 +326,22 @@ STATIC VOID LOG_Version(VOID)
 
 STATIC VOID LOG_STOP(INT signo) 
 {
+    CHAR szFilePath[LOG_EpollRcvBufSize];
     LOGShmList_S *pstListNode = g_pstLogServerContext->stShmListHeader.pstHeader;
 
     for (; pstListNode != NULL; pstListNode = pstListNode->pstNext)
     {
-        LOG_CloseShm(pstListNode->pstShmHeader->pShmAddr, pstListNode->pstShmHeader->uiShmSize);
         LOG_RawSysLog("/dev/shm/%s addr:%p size:%u closed\n", 
                         pstListNode->pstShmHeader->szFileName, 
                         pstListNode->pstShmHeader->pShmAddr,
                         pstListNode->pstShmHeader->uiShmSize);
+
+        szFilePath[0] = "\0";
+        snprintf(szFilePath, sizeof(szFilePath), "rm -f /dev/shm/%s", pstListNode->pstShmHeader->szFileName);
+        LOG_CloseShm(pstListNode->pstShmHeader->pShmAddr, pstListNode->pstShmHeader->uiShmSize);
+        LOG_System_s(szFilePath);
     }
+
     LOG_RawSysLog("Signal Ctrl + C, LogServer exit...\n");
     _exit(0);
 }
@@ -362,7 +368,6 @@ INT main(IN INT argc, IN CHAR *argv[])
     LOG_CreateEpollEvent();
 
     return 0;
-
 }
 
 #ifdef __cplusplus

@@ -121,7 +121,7 @@ INT main(IN INT argc, IN CHAR *argv[])
     for (UINT uiIndex = 0; uiIndex < 5; uiIndex++)
     {
         LOG_CreateClient();
-//        if (0 < fork()) break;
+        if (0 < fork()) break;
     }
 #endif
     

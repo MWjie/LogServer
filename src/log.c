@@ -67,7 +67,11 @@ VOID *LOG_WirteThread(VOID *arg)
 {
     pthread_detach(pthread_self());
     LOG_RawSysLog("Thread Create success, %p:%s\n", (CHAR *)arg, (CHAR *)arg);
-
+    while (1)
+    {
+        sleep(1);
+        printf("tid = %u runing..\n", pthread_self());
+    }
 
     return (VOID *)0;
 }
