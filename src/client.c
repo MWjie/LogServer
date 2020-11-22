@@ -45,23 +45,13 @@ volatile LOGShmHeader_S *g_pstShmHeader = NULL;
 volatile CHAR g_szLogStr[LOG_LocalSysLogBufSize];
 
 STATIC LOGLEVELSTR_S g_stLogLevel[] = {
-    {LOG_ERROR,     "ERROR"},
-    {LOG_WARN,      "WARN"},
-    {LOG_INFO,      "INFO"},
-    {LOG_DEBUG,     "DEBUG"},
-    {LOG_TRACE,     "TRACE"}
+    {LOG_ERROR,     "[ERROR]"},
+    {LOG_WARN,      "[WARN] "},
+    {LOG_INFO,      "[INFO] "},
+    {LOG_DEBUG,     "[DEBUG]"},
+    {LOG_TRACE,     "[TRACE]"}
 };
 
-
-STATIC VOID LOG_Version(VOID) 
-{
-    printf("LOG server v=%s sha=%s:%d bits=%d build=%s\n",
-            LOG_VERSION,
-            LOG_GIT_SHA1,
-            atoi(LOG_GIT_DIRTY) > 0,
-            sizeof(LONG) == 4 ? 32 : 64,
-            LOG_BUILD_ID);
-}
 
 INT LOG_InitClientFd(VOID)
 {
@@ -158,25 +148,35 @@ CHAR *LOG_WriteLog(IN LOGLEVEL_E enLogLevel, IN CHAR *pcFunc, IN INT uiLine, IN 
     va_list ap;
     struct timeval stTimeVal;
     struct tm stLocalTime;
-    ULONG ulStrLen = 0;
-    
+    ULONG ulStrLen    = 0;
+    ULONG ulStrLenRes = 0;
+
     va_start(ap, fmt);
     gettimeofday(&stTimeVal, NULL);
     localtime_r(&stTimeVal.tv_sec, &stLocalTime);
 
-    ulStrLen += snprintf(g_szLogStr, sizeof(g_szLogStr), "[%s] ", g_stLogLevel[enLogLevel].pcLevelStr);
+    ulStrLen += snprintf(g_szLogStr, sizeof(g_szLogStr), "%s ", g_stLogLevel[enLogLevel].pcLevelStr);
     ulStrLen += strftime(g_szLogStr + ulStrLen, sizeof(g_szLogStr) - ulStrLen, "%d %b %Y %H:%M:%S.", &stLocalTime);
     ulStrLen += snprintf(g_szLogStr + ulStrLen, sizeof(g_szLogStr) - ulStrLen, "%03d %s[%d]: ",
                          stTimeVal.tv_usec / 1000, pcFunc, uiLine);
     ulStrLen += vsnprintf(g_szLogStr + ulStrLen, sizeof(g_szLogStr) - ulStrLen, fmt, ap);
 
-//   memcpy(g_pstShmHeader->pShmWriteOffset_Client, g_szLogStr, ulStrLen);
-    strncpy(g_pstShmHeader->pShmWriteOffset_Client, g_szLogStr, sizeof(g_szLogStr));
-    g_pstShmHeader->pShmWriteOffset_Client = ((g_pstShmHeader->pShmWriteOffset_Client + ulStrLen) >= g_pstShmHeader->pShmEndOffset_Client) ?
-                                            g_pstShmHeader->pShmStartOffset_Client : (g_pstShmHeader->pShmWriteOffset_Client + ulStrLen);
-    g_pstShmHeader->pShmWriteOffset_Server = ((g_pstShmHeader->pShmWriteOffset_Server + ulStrLen) >= g_pstShmHeader->pShmEndOffset_Server) ?
-                                            g_pstShmHeader->pShmStartOffset_Server : (g_pstShmHeader->pShmWriteOffset_Server + ulStrLen);
-
+    memcpy(g_pstShmHeader->pShmWriteOffset_Client, g_szLogStr, ulStrLen);
+//    strncpy(g_pstShmHeader->pShmWriteOffset_Client, g_szLogStr, sizeof(g_szLogStr));
+    if ((g_pstShmHeader->pShmWriteOffset_Client + ulStrLen) >= g_pstShmHeader->pShmEndOffset_Client)
+    {
+        /* 如果最后部分超出保留地址范围，将多余部分写入头部地址 */
+        ulStrLenRes = (g_pstShmHeader->pShmWriteOffset_Client + ulStrLen - g_pstShmHeader->pShmEndOffset_Client);
+        memcpy(g_pstShmHeader->pShmStartOffset_Client, g_szLogStr + ulStrLen - ulStrLenRes, ulStrLenRes);
+        g_pstShmHeader->pShmWriteOffset_Client = g_pstShmHeader->pShmStartOffset_Client + ulStrLenRes;
+        g_pstShmHeader->pShmWriteOffset_Server = g_pstShmHeader->pShmStartOffset_Server + ulStrLenRes;
+    }
+    else
+    {
+        g_pstShmHeader->pShmWriteOffset_Client += ulStrLen;
+        g_pstShmHeader->pShmWriteOffset_Server += ulStrLen;
+    }
+  
     va_end(ap);
     return 0;
 }
@@ -184,20 +184,34 @@ CHAR *LOG_WriteLog(IN LOGLEVEL_E enLogLevel, IN CHAR *pcFunc, IN INT uiLine, IN 
 
 INT main(IN INT argc, IN CHAR *argv[])
 {
-    LOG_Version();
-
+    UINT uiCount = 0;
+    UINT uiIndex = 0;
 #ifdef LOG_Test
-    for (UINT uiIndex = 0; uiIndex < 5; uiIndex++)
+    for (uiIndex = 0; uiIndex < 5; uiIndex++)
     {
         LOG_CreateClient();
         if ((g_pstShmHeader = LOG_GetShmAddr(getpid(), 65536)) == NULL)
             return -1;
-        LOG_ErrorLog("test pid = %u %p:%s\n", getpid(), (CHAR *)g_pstShmHeader, (CHAR *)g_pstShmHeader);
         LOG_ErrorLog("hello\n");
         if (0 < fork()) break;
     }
+
+    if (uiIndex == 5) return 0;
+
+    while (1)
+    {
+        uiCount++;
+        LOG_ErrorLog("(%u) test pid = %u %p:%s\n", uiCount, getpid(), (CHAR *)g_pstShmHeader, (CHAR *)g_pstShmHeader);
+        LOG_WarnLog("(%u) test pid = %u %p:%s\n", uiCount, getpid(), (CHAR *)g_pstShmHeader, (CHAR *)g_pstShmHeader);
+        LOG_InfoLog("(%u) test pid = %u %p:%s\n", uiCount, getpid(), (CHAR *)g_pstShmHeader, (CHAR *)g_pstShmHeader);
+        LOG_DebugLog("(%u) test pid = %u %p:%s\n", uiCount, getpid(), (CHAR *)g_pstShmHeader, (CHAR *)g_pstShmHeader);
+        LOG_TraceLog("(%u) test pid = %u %p:%s\n", uiCount, getpid(), (CHAR *)g_pstShmHeader, (CHAR *)g_pstShmHeader);
+        usleep(100000);
+    }
+
 #endif
     
+
 
     return 0;
 

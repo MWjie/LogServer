@@ -75,6 +75,7 @@ VOID LOG_ReadThread(VOID *arg)
     ULONG ulStrLen  = 0;
     UINT64 ullNeadWriteLen  = 0;
     CHAR szFilePath[256]    = "";
+    CHAR szFileOldPath[256] = "";
     struct timeval stTimeVal;
     struct tm stLocalTime;
     struct stat stFileStat;
@@ -86,7 +87,7 @@ VOID LOG_ReadThread(VOID *arg)
     gettimeofday(&stTimeVal, NULL);
     localtime_r(&stTimeVal.tv_sec, &stLocalTime);
     ulStrLen  = snprintf(szFilePath, sizeof(szFilePath), "%s%s_", g_pstLogServerContext->szFilePath, pstShmHeader->szFileName);
-    ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%d_%b_%Y_%H:%M:%S.", &stLocalTime);
+    ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%d_%b_%Y_%H_%M_%S.", &stLocalTime);
     ulStrLen += snprintf(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%03d", stTimeVal.tv_usec / 1000);
     fd = open(szFilePath, O_WRONLY | O_CREAT | O_APPEND, 0666);
 
@@ -95,16 +96,18 @@ VOID LOG_ReadThread(VOID *arg)
         fstat(fd, &stFileStat);
         if (stFileStat.st_size >= LOG_MAXLogFileSize)
         {
+            close(fd); /* close old file */
+            strncpy(szFileOldPath, szFilePath, sizeof(szFileOldPath));
             gettimeofday(&stTimeVal, NULL);
             localtime_r(&stTimeVal.tv_sec, &stLocalTime);
-            ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "-%d_%b_%Y_%H:%M:%S.", &stLocalTime);
+            ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "-%d_%b_%Y_%H_%M_%S.", &stLocalTime);
             ulStrLen += snprintf(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%03d", stTimeVal.tv_usec / 1000);
-            close(fd); /* close old file */
+            rename(szFileOldPath, szFilePath);
 
             gettimeofday(&stTimeVal, NULL);
             localtime_r(&stTimeVal.tv_sec, &stLocalTime);
             ulStrLen  = snprintf(szFilePath, sizeof(szFilePath), "%s%s_", g_pstLogServerContext->szFilePath, pstShmHeader->szFileName);
-            ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%d_%b_%Y_%H:%M:%S.", &stLocalTime);
+            ulStrLen += strftime(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%d_%b_%Y_%H_%M_%S.", &stLocalTime);
             ulStrLen += snprintf(szFilePath + ulStrLen, sizeof(szFilePath) - ulStrLen, "%03d", stTimeVal.tv_usec / 1000);
             fd = open(szFilePath, O_WRONLY | O_CREAT | O_APPEND, 0666); /* open new file */
         }
