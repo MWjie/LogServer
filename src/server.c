@@ -35,15 +35,9 @@ extern "C" {
 
 #define LOG_LocalSysLogPath         ( "./LocalSysLog" )
 #define LOG_DefualtLogPath          ( "./Log/" )
-#define LOG_DefaultAddrIP           ( "127.0.0.1" )
-#define LOG_DefaultAddrPort         ( 32001U )
 #define LOG_SysLogSwitch            ( 0 )
 #define LOG_MaxEpollNum             ( 8U )
 #define LOG_EpollRcvBufSize         ( 256U )
-#define LOG_ShmReserveMemery        ( 512U )
-
-
-#define LOG_BIT_ROUNDUP(x, n)       ((x + (n - 1)) & (~(n - 1)))
 
 
 LOGServerContext_S *g_pstLogServerContext = NULL;
@@ -356,14 +350,6 @@ INT main(IN INT argc, IN CHAR *argv[])
         printf("LOG_InitContext error!\n");
         return -1;
     }
-
-#ifdef LOG_Test
-    LOG_System_s("uname -a");
-    for (;;)
-    {
-        sleep(1);
-    }
-#endif
 
     signal(SIGINT, LOG_STOP); 
     LOG_CreateEpollEvent();

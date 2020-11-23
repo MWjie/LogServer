@@ -30,18 +30,9 @@ extern "C" {
 
 #include "log.h"
 #include "util.h"
-#include "release.h"
 
 
-#define LOG_Test
-
-#define LOG_DefaultAddrIP           ( "127.0.0.1" )
-#define LOG_DefaultAddrPort         ( 32001U )
-#define LOG_MsgBufSize              ( 256U )
-#define LOG_LocalSysLogBufSize      ( 512UL )
-#define LOG_ShmReserveMemery        ( 512U )
-
-volatile LOGShmHeader_S *g_pstShmHeader = NULL;
+volatile __thread LOGShmHeader_S *g_pstShmHeader = NULL;
 volatile CHAR g_szLogStr[LOG_LocalSysLogBufSize];
 
 STATIC LOGLEVELSTR_S g_stLogLevel[] = {
@@ -53,11 +44,11 @@ STATIC LOGLEVELSTR_S g_stLogLevel[] = {
 };
 
 
-INT LOG_InitClientFd(VOID)
+STATIC INT LOG_InitClientFd(USHORT usClientPort)
 {
     INT socketfd    = -1;
     INT iErron      = 0;
-    STATIC USHORT usClientPort = LOG_DefaultAddrPort;
+    
     struct sockaddr_in clientaddr;
 
     socketfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -70,7 +61,7 @@ INT LOG_InitClientFd(VOID)
  
     bzero(&clientaddr, sizeof(struct sockaddr_in));
     clientaddr.sin_family = AF_INET;
-    clientaddr.sin_port = htons(++usClientPort);
+    clientaddr.sin_port = htons(usClientPort);
     clientaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     if (-1 == bind(socketfd, (struct sockaddr *)&clientaddr, sizeof(struct sockaddr)))
     {
@@ -83,43 +74,8 @@ INT LOG_InitClientFd(VOID)
     return socketfd;
 }
 
-INT LOG_CreateClient(VOID)
-{
-    INT socketfd        = -1;
-    INT iErron          = 0;
-    INT iMsgLen         = 0;
-    CHAR szSendBuf[LOG_MsgBufSize] = "";
-    CHAR szRecvBuf[LOG_MsgBufSize] = "";
-    socklen_t iAddrLen  = sizeof(struct sockaddr);
-    struct sockaddr_in serveraddr;
 
-    socketfd = LOG_InitClientFd();
-    if (-1 == socketfd)
-    {
-        return -1;
-    }
-
-    bzero(&serveraddr, sizeof(struct sockaddr_in));
-    serveraddr.sin_family       = AF_INET;
-    serveraddr.sin_port         = htons(LOG_DefaultAddrPort);
-    serveraddr.sin_addr.s_addr  = inet_addr(LOG_DefaultAddrIP);
-
-    /* Msg ShmFilename:pid:ShmSize */
-    iMsgLen = snprintf(szSendBuf, LOG_MsgBufSize, "%d:%d:65536", getpid(), getpid());
-    sendto(socketfd, szSendBuf, iMsgLen, 0, (struct sockaddr *)&serveraddr, sizeof(struct sockaddr));
-    fprintf(stdout, "send = %s\n", szSendBuf);
-
-    iMsgLen = recvfrom(socketfd, szRecvBuf, LOG_MsgBufSize, 0, (struct sockaddr *)&serveraddr, &iAddrLen);
-    if (0 != strncmp(szSendBuf, szRecvBuf, strlen(szSendBuf)))
-    {
-        fprintf(stdout, "send = %s : recv = %s\n", szSendBuf, szRecvBuf);
-    }
-
-    close(socketfd);
-    return 0;
-}
-
-LOGShmHeader_S *LOG_GetShmAddr(pid_t pid, UINT uiShmSize)
+STATIC LOGShmHeader_S *LOG_GetShmAddr(pid_t pid, UINT uiShmSize)
 {
     LOGShmHeader_S *pstShmHeader = NULL;
     CHAR szShmName[32] = "";
@@ -139,7 +95,47 @@ LOGShmHeader_S *LOG_GetShmAddr(pid_t pid, UINT uiShmSize)
     pstShmHeader->pShmWriteOffset_Client    = pstShmHeader->pShmStartOffset_Client;
     pstShmHeader->pShmReadOffset_Client     = pstShmHeader->pShmStartOffset_Client;
 
+    g_pstShmHeader = pstShmHeader;
     return pstShmHeader;
+}
+
+
+CHAR *LOG_CreateClient(pid_t pid, UINT uiShmSize)
+{
+    INT socketfd        = -1;
+    INT iErron          = 0;
+    INT iMsgLen         = 0;
+    CHAR szSendBuf[LOG_MsgBufSize] = "";
+    CHAR szRecvBuf[LOG_MsgBufSize] = "";
+    socklen_t iAddrLen  = sizeof(struct sockaddr);
+    struct sockaddr_in serveraddr;
+
+    STATIC USHORT usClientPort = LOG_DefaultAddrPort;
+
+    socketfd = LOG_InitClientFd(++usClientPort);
+    if (-1 == socketfd)
+    {
+        return NULL;
+    }
+
+    bzero(&serveraddr, sizeof(struct sockaddr_in));
+    serveraddr.sin_family       = AF_INET;
+    serveraddr.sin_port         = htons(LOG_DefaultAddrPort);
+    serveraddr.sin_addr.s_addr  = inet_addr(LOG_DefaultAddrIP);
+
+    /* Msg ShmFilename:pid:ShmSize */
+    iMsgLen = snprintf(szSendBuf, LOG_MsgBufSize, "%d:%d:%u", pid, pid, uiShmSize);
+    sendto(socketfd, szSendBuf, iMsgLen, 0, (struct sockaddr *)&serveraddr, sizeof(struct sockaddr));
+    fprintf(stdout, "send = %s\n", szSendBuf);
+
+    iMsgLen = recvfrom(socketfd, szRecvBuf, LOG_MsgBufSize, 0, (struct sockaddr *)&serveraddr, &iAddrLen);
+    if (0 != strncmp(szSendBuf, szRecvBuf, strlen(szSendBuf)))
+    {
+        fprintf(stdout, "send = %s : recv = %s\n", szSendBuf, szRecvBuf);
+    }
+
+    close(socketfd);
+    return LOG_GetShmAddr(pid, uiShmSize);
 }
 
 
@@ -182,17 +178,16 @@ CHAR *LOG_WriteLog(IN LOGLEVEL_E enLogLevel, IN CHAR *pcFunc, IN INT uiLine, IN 
 }
 
 
+/* 测试LogServer读取日志 
 INT main(IN INT argc, IN CHAR *argv[])
 {
     UINT uiCount = 0;
     UINT uiIndex = 0;
-#ifdef LOG_Test
+
     for (uiIndex = 0; uiIndex < 5; uiIndex++)
     {
-        LOG_CreateClient();
-        if ((g_pstShmHeader = LOG_GetShmAddr(getpid(), 65536)) == NULL)
+        if (LOG_CreateClient(getpid(), 65536)) == NULL)
             return -1;
-        LOG_ErrorLog("hello\n");
         if (0 < fork()) break;
     }
 
@@ -209,14 +204,10 @@ INT main(IN INT argc, IN CHAR *argv[])
         usleep(100000);
     }
 
-#endif
-    
-
-
     return 0;
 
 }
-
+*/
 
 #ifdef __cplusplus
 #if __cplusplus
