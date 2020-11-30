@@ -153,7 +153,7 @@ CHAR *LOG_WriteLog(IN LOGLEVEL_E enLogLevel, IN CHAR *pcFunc, IN INT uiLine, IN 
 
     ulStrLen += snprintf(g_szLogStr, sizeof(g_szLogStr), "%s ", g_stLogLevel[enLogLevel].pcLevelStr);
     ulStrLen += strftime(g_szLogStr + ulStrLen, sizeof(g_szLogStr) - ulStrLen, "%d %b %Y %H:%M:%S.", &stLocalTime);
-    ulStrLen += snprintf(g_szLogStr + ulStrLen, sizeof(g_szLogStr) - ulStrLen, "%03d %s[%d]: ",
+    ulStrLen += snprintf(g_szLogStr + ulStrLen, sizeof(g_szLogStr) - ulStrLen, "%03ld %s[%d]: ",
                          stTimeVal.tv_usec / 1000, pcFunc, uiLine);
     ulStrLen += vsnprintf(g_szLogStr + ulStrLen, sizeof(g_szLogStr) - ulStrLen, fmt, ap);
 
